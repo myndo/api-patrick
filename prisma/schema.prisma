@@ -1,0 +1,43 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["metrics", "fullTextSearchPostgres"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  id          String    @id @default(uuid())
+  email       String    @unique
+  password    String?
+  provider    String?
+  confirmedAt DateTime?
+  profile     Profile?
+}
+
+model Profile {
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  id          String    @id @default(uuid())
+  firstName   String
+  lastName    String?
+  address     String?
+  phone       String?
+  photo       String?
+  description String?   @db.Text
+  testimonial String?   @db.Text
+  city        String?
+  currencyId  String?
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
