@@ -24,6 +24,7 @@ model User {
   confirmedAt    DateTime?
   profile        Profile?
   organization   Organization?
+  contributors   Contributor[]
 }
 
 model Profile {
@@ -45,15 +46,37 @@ model Profile {
 }
 
 model Organization {
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-  id          String    @id @default(uuid())
-  name        String
-  description String?   @db.Text
-  userId      String    @unique
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  posts       Post[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?
+  id           String        @id @default(uuid())
+  name         String
+  description  String?       @db.Text
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts        Post[]
+  contributors Contributor[]
+}
+
+model Contributor {
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  deletedAt      DateTime?
+  id             String                @id @default(uuid())
+  description    String?               @db.Text
+  userCreatedId  String?
+  confirmedAt    DateTime?
+  status         ContributorStatusEnum
+  userId         String?
+  user           User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization?         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+enum ContributorStatusEnum {
+  CONTRIBUTOR
+  INVITED_CONTRIBUTOR
+  NEW_CONTRIBUTOR
 }
 
 model Post {

@@ -13,12 +13,14 @@ import {
 } from '@nestjs/common';
 
 import { config } from '../../app/config';
+import { ContributorStatusEnum } from '../../app/database/prisma';
 import { generateNumber } from '../../app/utils/commons';
 import {
   validation_login_cookie_setting,
   validation_verify_cookie_setting,
 } from '../../app/utils/cookies';
 import { reply } from '../../app/utils/reply';
+import { ContributorsService } from '../contributors/contributors.service';
 import { ProfilesService } from '../profiles/profiles.service';
 import { authCodeConfirmationMail } from './mails/auth-code-confirmation-mail';
 import { CheckUserService, JwtToken } from './middleware/check-user.service';
@@ -39,6 +41,7 @@ export class UsersAuthController {
   constructor(
     private readonly usersService: UsersService,
     private readonly profilesService: ProfilesService,
+    private readonly contributorsService: ContributorsService,
     private readonly checkUserService: CheckUserService,
   ) {}
 
@@ -58,6 +61,12 @@ export class UsersAuthController {
       password: await hashPassword(password),
       provider: 'default',
       email: email.toLocaleLowerCase(),
+      organization: {
+        create: {
+          name: `${firstName} ${lastName}`,
+          description: country,
+        },
+      },
     });
 
     const profile = await this.profilesService.createOne({
@@ -66,6 +75,21 @@ export class UsersAuthController {
       user: {
         connect: {
           id: user.id,
+        },
+      },
+    });
+
+    await this.contributorsService.createOne({
+      description: country,
+      status: ContributorStatusEnum.CONTRIBUTOR,
+      user: {
+        connect: {
+          id: user.id,
+        },
+      },
+      organization: {
+        connect: {
+          id: user.organizationId,
         },
       },
     });
