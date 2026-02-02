@@ -1,9 +1,9 @@
-import { Profile } from '../../app/database/prisma';
-import { PaginationType } from '../../app/utils/pagination/with-pagination';
+import { Prisma, Profile } from '../../app/database/prisma';
+import { PrismaPagination } from '../../app/utils/pagination';
 
 export type GetProfilesSelections = {
   search?: string;
-  pagination?: PaginationType;
+  pagination?: PrismaPagination;
 };
 
 export type GetOneProfilesSelections = {
@@ -14,20 +14,20 @@ export type UpdateProfilesSelections = {
   profileId: Profile['id'];
 };
 
-export type CreateProfilesOptions = Partial<Profile>;
+export type CreateProfilesOptions = Prisma.ProfileCreateInput;
 
-export type UpdateProfilesOptions = Partial<Profile>;
+export type UpdateProfilesOptions = Prisma.ProfileUpdateInput;
 
 export const UserProfileSelect = {
   createdAt: true,
   id: true,
-  profession: true,
-  firstName: true,
-  lastName: true,
-  address: true,
+  city: true,
   phone: true,
   photo: true,
-  city: true,
+  address: true,
+  lastName: true,
+  firstName: true,
+  profession: true,
   countryName: true,
   description: true,
   currency: {

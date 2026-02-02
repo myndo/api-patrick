@@ -13,11 +13,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import {
-  PaginationType,
-  RequestPaginationDto,
-  addPagination,
-} from 'src/app/utils/pagination';
+import { RequestPaginationDto, addPagination } from 'src/app/utils/pagination';
 import { SearchQueryDto } from 'src/app/utils/search-query';
 import { config } from '../../app/config/index';
 import { reply } from '../../app/utils/reply';
@@ -71,7 +67,7 @@ export class UsersController {
     const { member, isSubscribed } = queryUsers;
 
     const { take, page, sort } = requestPaginationDto;
-    const pagination: PaginationType = addPagination({ page, take, sort });
+    const pagination = addPagination({ page, take, sort });
 
     const users = await this.usersService.findAll({
       member,

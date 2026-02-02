@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../app/database/database.service';
-import { Prisma, User } from '../../app/database/prisma';
+import { FilterGroup, Prisma, User } from '../../app/database/prisma';
 import {
   dateTimeNowUtc,
   lastDayMonth,
@@ -75,55 +75,58 @@ export class UsersService {
   }
 
   /** Find one User in  database. */
-  async findOneBy(selections: GetOneUsersSelections) {
-    const prismaWhereUser = {} as Prisma.UserWhereInput;
-    const { userId, organizationId, email, provider } = selections;
+  async findOneBy({
+    userId,
+    organizationId,
+    email,
+    provider,
+  }: GetOneUsersSelections) {
+    const where: FilterGroup<Prisma.UserWhereInput> = {
+      deletedAt: null,
+      AND: [],
+    };
 
     if (email) {
-      Object.assign(prismaWhereUser, { email: email.toLocaleLowerCase() });
+      where.AND.push({ email: { contains: email, mode: 'insensitive' } });
     }
 
     if (provider) {
-      Object.assign(prismaWhereUser, { provider });
+      where.AND.push({ provider });
     }
 
     if (userId) {
-      Object.assign(prismaWhereUser, { id: userId });
+      where.AND.push({ id: userId });
     }
 
     if (organizationId) {
-      Object.assign(prismaWhereUser, { organizationId });
+      where.AND.push({ organizationId });
     }
 
     const user = await this.client.user.findFirst({
-      where: { ...prismaWhereUser, deletedAt: null },
-      select: {
-        password: true,
-        id: true,
-        email: true,
-        confirmedAt: true,
-        profile: true,
-      },
+      where,
+      select: UserSelect,
     });
 
     return user;
   }
 
-  /** Find one User in  database. */
-  async findMe(selections: GetOneUsersSelections) {
-    const prismaWhereUser = {} as Prisma.UserWhereInput;
-    const { userId, organizationId } = selections;
+  /** Find me User in  database. */
+  async findMe({ userId, organizationId }: GetOneUsersSelections) {
+    const where: FilterGroup<Prisma.UserWhereInput> = {
+      deletedAt: null,
+      AND: [],
+    };
 
     if (userId) {
-      Object.assign(prismaWhereUser, { id: userId });
+      where.AND.push({ id: userId });
     }
 
     if (organizationId) {
-      Object.assign(prismaWhereUser, { organizationId });
+      where.AND.push({ organizationId });
     }
 
     const user = await this.client.user.findFirst({
-      where: { ...prismaWhereUser, deletedAt: null },
+      where,
       select: UserSelect,
     });
 
@@ -132,27 +135,20 @@ export class UsersService {
 
   /** Create one User in database. */
   async createOne(options: CreateUsersOptions): Promise<User> {
-    const { email, password, provider, confirmedAt } = options;
-
-    const user = this.client.user.create({
-      data: {
-        email,
-        password,
-        provider,
-        confirmedAt,
-      },
+    return await this.client.user.create({
+      data: options,
     });
-
-    return user;
   }
 
   /** Get users analytics. */
-  async getUsersAnalytics(selections: GetUsersSelections) {
-    const prismaWhere = {} as Prisma.UserWhereInput;
-    const { periode, months, year } = selections;
+  async getUsersAnalytics({ periode, months, year }: GetUsersSelections) {
+    const where: FilterGroup<Prisma.UserWhereInput> = {
+      deletedAt: null,
+      AND: [],
+    };
 
     if (periode) {
-      Object.assign(prismaWhere, {
+      where.AND.push({
         createdAt: {
           gte: substrateDaysToTimeNowUtcDate(Number(periode)),
           lte: dateTimeNowUtc(),
@@ -161,14 +157,14 @@ export class UsersService {
     }
 
     if (year) {
-      Object.assign(prismaWhere, {
+      where.AND.push({
         createdAt: {
           gte: new Date(`${Number(year)}-01-01`),
           lte: new Date(`${Number(year) + 1}-01-01`),
         },
       });
       if (months) {
-        Object.assign(prismaWhere, {
+        where.AND.push({
           createdAt: {
             gte: new Date(`${year}-${months}-01`),
             lte: lastDayMonth({
@@ -182,10 +178,7 @@ export class UsersService {
 
     const groupUsers = await this.client.user.groupBy({
       by: ['createdAt'],
-      where: {
-        ...prismaWhere,
-        deletedAt: null,
-      },
+      where,
       _count: true,
     });
 
@@ -200,24 +193,13 @@ export class UsersService {
 
   /** Update one User in database. */
   async updateOne(
-    selections: UpdateUsersSelections,
+    { userId }: UpdateUsersSelections,
     options: UpdateUsersOptions,
   ): Promise<User> {
-    const { userId } = selections;
-    const { email, provider, password, confirmedAt, deletedAt } = options;
-
-    const user = this.client.user.update({
+    return await this.client.user.update({
       where: { id: userId },
-      data: {
-        email,
-        provider,
-        password,
-        confirmedAt,
-        deletedAt,
-      },
+      data: options,
     });
-
-    return user;
   }
 
   /** Get users transactions. */

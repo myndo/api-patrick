@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../app/database/database.service';
-import { Prisma, Profile } from '../../app/database/prisma';
+import { FilterGroup, Prisma, Profile } from '../../app/database/prisma';
 import {
   WithPaginationResponse,
   withPagination,
@@ -21,11 +21,14 @@ export class ProfilesService {
   async findAll(
     selections: GetProfilesSelections,
   ): Promise<WithPaginationResponse | null> {
-    const prismaWhereProfile = {} as Prisma.ProfileWhereInput;
+    const where: FilterGroup<Prisma.ProfileWhereInput> = {
+      deletedAt: null,
+      AND: [],
+    };
     const { search, pagination } = selections;
 
     if (search) {
-      Object.assign(prismaWhereProfile, {
+      where.AND.push({
         OR: [
           {
             firstName: { contains: search, mode: 'insensitive' },
@@ -35,21 +38,15 @@ export class ProfilesService {
       });
     }
 
-    const paginationValue = {
+    const rowCount = await this.client.profile.count({
+      where,
+    });
+
+    const profiles = await this.client.profile.findMany({
+      where,
+      skip: pagination.skip,
       take: pagination.take,
       orderBy: pagination.orderBy,
-    };
-
-    const arg: any = {
-      ...paginationValue,
-      where: { ...prismaWhereProfile, deletedAt: null },
-      skip: pagination?.cursor ? 1 : pagination.skip,
-      cursor: pagination.cursor ? { id: pagination.cursor } : undefined,
-    };
-
-    const profiles = await this.client.profile.findMany(arg);
-    const rowCount = await this.client.profile.count({
-      where: { ...prismaWhereProfile, deletedAt: null },
     });
 
     return withPagination({
@@ -61,15 +58,18 @@ export class ProfilesService {
 
   /** Find one Profile in database. */
   async findOneBy(selections: GetOneProfilesSelections) {
-    const prismaWhereProfile = {} as Prisma.ProfileWhereInput;
+    const where: FilterGroup<Prisma.ProfileWhereInput> = {
+      deletedAt: null,
+      AND: [],
+    };
     const { profileId } = selections;
 
     if (profileId) {
-      Object.assign(prismaWhereProfile, { id: profileId });
+      where.AND.push({ id: profileId });
     }
 
     const profile = await this.client.profile.findFirst({
-      where: { ...prismaWhereProfile, deletedAt: null },
+      where,
       select: UserProfileSelect,
     });
 
@@ -78,25 +78,19 @@ export class ProfilesService {
 
   /** Create one Profile in database. */
   async createOne(options: CreateProfilesOptions): Promise<Profile> {
-    const profile = this.client.profile.create({
-      data: options as Prisma.ProfileCreateInput,
+    return await this.client.profile.create({
+      data: options,
     });
-
-    return profile;
   }
 
   /** Update one Profile in database. */
   async updateOne(
-    selections: UpdateProfilesSelections,
+    { profileId }: UpdateProfilesSelections,
     options: UpdateProfilesOptions,
   ): Promise<Profile> {
-    const { profileId } = selections;
-
-    const profile = this.client.profile.update({
+    return await this.client.profile.update({
       where: { id: profileId },
-      data: options as Prisma.ProfileUpdateInput,
+      data: options,
     });
-
-    return profile;
   }
 }

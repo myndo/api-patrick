@@ -1,6 +1,6 @@
-import { User } from '../../app/database/prisma';
 import * as argon2 from 'argon2';
-import { PaginationType } from '../../app/utils/pagination/with-pagination';
+import { Prisma, User } from '../../app/database/prisma';
+import { PrismaPagination } from '../../app/utils/pagination';
 
 export type JwtPayloadType = {
   id: string;
@@ -16,7 +16,7 @@ export type GetUsersSelections = {
   member?: string;
   isSubscribed?: string;
   organizationId?: string;
-  pagination?: PaginationType;
+  pagination?: PrismaPagination;
 };
 
 export type GetOneUsersSelections = {
@@ -31,9 +31,9 @@ export type UpdateUsersSelections = {
   organizationId?: User['organizationId'];
 };
 
-export type CreateUsersOptions = Partial<User>;
+export type CreateUsersOptions = Prisma.UserCreateInput;
 
-export type UpdateUsersOptions = Partial<User>;
+export type UpdateUsersOptions = Prisma.UserUpdateInput;
 
 export const checkIfPasswordMatch = async (
   userPassword: string,

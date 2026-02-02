@@ -11,4 +11,5 @@
 export type * from './models/User'
 export type * from './models/Profile'
 export type * from './models/Organization'
+export type * from './models/Post'
 export type * from './commonInputTypes'

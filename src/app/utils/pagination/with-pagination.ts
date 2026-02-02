@@ -1,13 +1,13 @@
 import { Prisma } from '../../database/prisma';
 import { SortType } from './request-pagination.dto';
 
-export type WithPaginationResponse = {
-  pagination?: PaginationType;
-  value: any;
-  rowCount?: number;
-  revenue?: number;
-  animals?: number;
-  salesContract?: number;
+type OrderBy = { [field: string]: 'asc' | 'desc' };
+
+export type PrismaPagination = {
+  take: number;
+  skip: number;
+  page: number;
+  orderBy?: OrderBy;
 };
 
 export type PaginationType = {
@@ -22,8 +22,27 @@ export type PaginationType = {
   sort: SortType;
 };
 
+export type WithPaginationRequest = {
+  pagination?: PrismaPagination;
+  value: any;
+  rowCount?: number;
+};
+
+export type WithPaginationResponse<Value = null> = {
+  total: number;
+  per_page: number;
+  current_page: number;
+  next_page: number;
+  prev_page: number;
+  last_page: number;
+  sort: SortType;
+  total_page: number;
+  total_value: number;
+  value: Value;
+};
+
 export const addPagination = (options: PaginationType) => {
-  const pagination: any = {};
+  const pagination = {} as any;
 
   const { page, take, sort, sortBy } = options;
   const takePage = Number(page);
@@ -37,20 +56,21 @@ export const addPagination = (options: PaginationType) => {
   if (sortBy) {
     pagination.orderBy = { [sortBy as string]: sort as Prisma.SortOrder };
   }
+  pagination.sort = sort;
+  pagination.offset = takeSkip;
   pagination.page = pageTakeSkip?.page;
   pagination.limit = pageTakeSkip?.take;
-  pagination.offset = takeSkip;
   pagination.take = pageTakeSkip?.take;
   pagination.skip = pageTakeSkip?.skip;
-  pagination.sort = sort;
 
   return pagination;
 };
 
-export const withPagination = async (options: WithPaginationResponse) => {
-  const { rowCount, value, pagination, revenue, animals, salesContract } =
-    options;
-
+export const withPagination = <V>({
+  value,
+  rowCount,
+  pagination,
+}: WithPaginationRequest): WithPaginationResponse<V> => {
   const n_pages = Math.ceil(Number(rowCount) / Number(pagination?.take));
 
   const next_page =
@@ -63,18 +83,14 @@ export const withPagination = async (options: WithPaginationResponse) => {
 
   return {
     total: rowCount,
-    per_page: pagination?.take ?? 0,
-    current_page: pagination?.page,
     next_page: next_page,
     prev_page: prev_page,
-    last_page: n_pages ? n_pages : undefined,
-    skip: pagination?.skip,
-    sort: pagination?.sort ?? 'desc',
     total_page: n_pages,
+    per_page: pagination?.take ?? 0,
+    current_page: pagination?.page,
+    last_page: n_pages ? n_pages : undefined,
+    sort: pagination.orderBy.sort as SortType,
     total_value: Array.isArray(value) ? value.length : 0,
     value,
-    revenue,
-    animals,
-    salesContract,
   };
 };

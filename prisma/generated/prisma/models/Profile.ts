@@ -207,7 +207,7 @@ export type ProfileGroupByOutputType = {
   deletedAt: Date | null
   id: string
   firstName: string
-  lastName: string | null
+  lastName: string
   address: string | null
   phone: string | null
   photo: string | null
@@ -245,7 +245,7 @@ export type ProfileWhereInput = {
   deletedAt?: Prisma.DateTimeNullableFilter<"Profile"> | Date | string | null
   id?: Prisma.StringFilter<"Profile"> | string
   firstName?: Prisma.StringFilter<"Profile"> | string
-  lastName?: Prisma.StringNullableFilter<"Profile"> | string | null
+  lastName?: Prisma.StringFilter<"Profile"> | string
   address?: Prisma.StringNullableFilter<"Profile"> | string | null
   phone?: Prisma.StringNullableFilter<"Profile"> | string | null
   photo?: Prisma.StringNullableFilter<"Profile"> | string | null
@@ -263,7 +263,7 @@ export type ProfileOrderByWithRelationInput = {
   deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   id?: Prisma.SortOrder
   firstName?: Prisma.SortOrder
-  lastName?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastName?: Prisma.SortOrder
   address?: Prisma.SortOrderInput | Prisma.SortOrder
   phone?: Prisma.SortOrderInput | Prisma.SortOrder
   photo?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -286,7 +286,7 @@ export type ProfileWhereUniqueInput = Prisma.AtLeast<{
   updatedAt?: Prisma.DateTimeFilter<"Profile"> | Date | string
   deletedAt?: Prisma.DateTimeNullableFilter<"Profile"> | Date | string | null
   firstName?: Prisma.StringFilter<"Profile"> | string
-  lastName?: Prisma.StringNullableFilter<"Profile"> | string | null
+  lastName?: Prisma.StringFilter<"Profile"> | string
   address?: Prisma.StringNullableFilter<"Profile"> | string | null
   phone?: Prisma.StringNullableFilter<"Profile"> | string | null
   photo?: Prisma.StringNullableFilter<"Profile"> | string | null
@@ -303,7 +303,7 @@ export type ProfileOrderByWithAggregationInput = {
   deletedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   id?: Prisma.SortOrder
   firstName?: Prisma.SortOrder
-  lastName?: Prisma.SortOrderInput | Prisma.SortOrder
+  lastName?: Prisma.SortOrder
   address?: Prisma.SortOrderInput | Prisma.SortOrder
   phone?: Prisma.SortOrderInput | Prisma.SortOrder
   photo?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -326,7 +326,7 @@ export type ProfileScalarWhereWithAggregatesInput = {
   deletedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Profile"> | Date | string | null
   id?: Prisma.StringWithAggregatesFilter<"Profile"> | string
   firstName?: Prisma.StringWithAggregatesFilter<"Profile"> | string
-  lastName?: Prisma.StringNullableWithAggregatesFilter<"Profile"> | string | null
+  lastName?: Prisma.StringWithAggregatesFilter<"Profile"> | string
   address?: Prisma.StringNullableWithAggregatesFilter<"Profile"> | string | null
   phone?: Prisma.StringNullableWithAggregatesFilter<"Profile"> | string | null
   photo?: Prisma.StringNullableWithAggregatesFilter<"Profile"> | string | null
@@ -343,7 +343,7 @@ export type ProfileCreateInput = {
   deletedAt?: Date | string | null
   id?: string
   firstName: string
-  lastName?: string | null
+  lastName: string
   address?: string | null
   phone?: string | null
   photo?: string | null
@@ -360,7 +360,7 @@ export type ProfileUncheckedCreateInput = {
   deletedAt?: Date | string | null
   id?: string
   firstName: string
-  lastName?: string | null
+  lastName: string
   address?: string | null
   phone?: string | null
   photo?: string | null
@@ -377,7 +377,7 @@ export type ProfileUpdateInput = {
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   id?: Prisma.StringFieldUpdateOperationsInput | string
   firstName?: Prisma.StringFieldUpdateOperationsInput | string
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -394,7 +394,7 @@ export type ProfileUncheckedUpdateInput = {
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   id?: Prisma.StringFieldUpdateOperationsInput | string
   firstName?: Prisma.StringFieldUpdateOperationsInput | string
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -411,7 +411,7 @@ export type ProfileCreateManyInput = {
   deletedAt?: Date | string | null
   id?: string
   firstName: string
-  lastName?: string | null
+  lastName: string
   address?: string | null
   phone?: string | null
   photo?: string | null
@@ -428,7 +428,7 @@ export type ProfileUpdateManyMutationInput = {
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   id?: Prisma.StringFieldUpdateOperationsInput | string
   firstName?: Prisma.StringFieldUpdateOperationsInput | string
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -444,7 +444,7 @@ export type ProfileUncheckedUpdateManyInput = {
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   id?: Prisma.StringFieldUpdateOperationsInput | string
   firstName?: Prisma.StringFieldUpdateOperationsInput | string
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -555,7 +555,7 @@ export type ProfileCreateWithoutUserInput = {
   deletedAt?: Date | string | null
   id?: string
   firstName: string
-  lastName?: string | null
+  lastName: string
   address?: string | null
   phone?: string | null
   photo?: string | null
@@ -571,7 +571,7 @@ export type ProfileUncheckedCreateWithoutUserInput = {
   deletedAt?: Date | string | null
   id?: string
   firstName: string
-  lastName?: string | null
+  lastName: string
   address?: string | null
   phone?: string | null
   photo?: string | null
@@ -603,7 +603,7 @@ export type ProfileUpdateWithoutUserInput = {
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   id?: Prisma.StringFieldUpdateOperationsInput | string
   firstName?: Prisma.StringFieldUpdateOperationsInput | string
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -619,7 +619,7 @@ export type ProfileUncheckedUpdateWithoutUserInput = {
   deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   id?: Prisma.StringFieldUpdateOperationsInput | string
   firstName?: Prisma.StringFieldUpdateOperationsInput | string
-  lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
   address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   photo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -724,7 +724,7 @@ export type $ProfilePayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     deletedAt: Date | null
     id: string
     firstName: string
-    lastName: string | null
+    lastName: string
     address: string | null
     phone: string | null
     photo: string | null

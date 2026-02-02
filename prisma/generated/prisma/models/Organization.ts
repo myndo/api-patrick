@@ -199,6 +199,7 @@ export type OrganizationWhereInput = {
   description?: Prisma.StringNullableFilter<"Organization"> | string | null
   userId?: Prisma.StringFilter<"Organization"> | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  posts?: Prisma.PostListRelationFilter
 }
 
 export type OrganizationOrderByWithRelationInput = {
@@ -210,6 +211,7 @@ export type OrganizationOrderByWithRelationInput = {
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   userId?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
+  posts?: Prisma.PostOrderByRelationAggregateInput
   _relevance?: Prisma.OrganizationOrderByRelevanceInput
 }
 
@@ -225,6 +227,7 @@ export type OrganizationWhereUniqueInput = Prisma.AtLeast<{
   name?: Prisma.StringFilter<"Organization"> | string
   description?: Prisma.StringNullableFilter<"Organization"> | string | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  posts?: Prisma.PostListRelationFilter
 }, "id" | "userId">
 
 export type OrganizationOrderByWithAggregationInput = {
@@ -261,6 +264,7 @@ export type OrganizationCreateInput = {
   name: string
   description?: string | null
   user: Prisma.UserCreateNestedOneWithoutOrganizationInput
+  posts?: Prisma.PostCreateNestedManyWithoutOrganizationInput
 }
 
 export type OrganizationUncheckedCreateInput = {
@@ -271,6 +275,7 @@ export type OrganizationUncheckedCreateInput = {
   name: string
   description?: string | null
   userId: string
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
 export type OrganizationUpdateInput = {
@@ -281,6 +286,7 @@ export type OrganizationUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user?: Prisma.UserUpdateOneRequiredWithoutOrganizationNestedInput
+  posts?: Prisma.PostUpdateManyWithoutOrganizationNestedInput
 }
 
 export type OrganizationUncheckedUpdateInput = {
@@ -291,6 +297,7 @@ export type OrganizationUncheckedUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.StringFieldUpdateOperationsInput | string
+  posts?: Prisma.PostUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
 export type OrganizationCreateManyInput = {
@@ -363,6 +370,11 @@ export type OrganizationMinOrderByAggregateInput = {
   userId?: Prisma.SortOrder
 }
 
+export type OrganizationScalarRelationFilter = {
+  is?: Prisma.OrganizationWhereInput
+  isNot?: Prisma.OrganizationWhereInput
+}
+
 export type OrganizationCreateNestedOneWithoutUserInput = {
   create?: Prisma.XOR<Prisma.OrganizationCreateWithoutUserInput, Prisma.OrganizationUncheckedCreateWithoutUserInput>
   connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutUserInput
@@ -395,6 +407,20 @@ export type OrganizationUncheckedUpdateOneWithoutUserNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.OrganizationUpdateToOneWithWhereWithoutUserInput, Prisma.OrganizationUpdateWithoutUserInput>, Prisma.OrganizationUncheckedUpdateWithoutUserInput>
 }
 
+export type OrganizationCreateNestedOneWithoutPostsInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutPostsInput, Prisma.OrganizationUncheckedCreateWithoutPostsInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutPostsInput
+  connect?: Prisma.OrganizationWhereUniqueInput
+}
+
+export type OrganizationUpdateOneRequiredWithoutPostsNestedInput = {
+  create?: Prisma.XOR<Prisma.OrganizationCreateWithoutPostsInput, Prisma.OrganizationUncheckedCreateWithoutPostsInput>
+  connectOrCreate?: Prisma.OrganizationCreateOrConnectWithoutPostsInput
+  upsert?: Prisma.OrganizationUpsertWithoutPostsInput
+  connect?: Prisma.OrganizationWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.OrganizationUpdateToOneWithWhereWithoutPostsInput, Prisma.OrganizationUpdateWithoutPostsInput>, Prisma.OrganizationUncheckedUpdateWithoutPostsInput>
+}
+
 export type OrganizationCreateWithoutUserInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -402,6 +428,7 @@ export type OrganizationCreateWithoutUserInput = {
   id?: string
   name: string
   description?: string | null
+  posts?: Prisma.PostCreateNestedManyWithoutOrganizationInput
 }
 
 export type OrganizationUncheckedCreateWithoutUserInput = {
@@ -411,6 +438,7 @@ export type OrganizationUncheckedCreateWithoutUserInput = {
   id?: string
   name: string
   description?: string | null
+  posts?: Prisma.PostUncheckedCreateNestedManyWithoutOrganizationInput
 }
 
 export type OrganizationCreateOrConnectWithoutUserInput = {
@@ -436,6 +464,7 @@ export type OrganizationUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  posts?: Prisma.PostUpdateManyWithoutOrganizationNestedInput
 }
 
 export type OrganizationUncheckedUpdateWithoutUserInput = {
@@ -445,8 +474,94 @@ export type OrganizationUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  posts?: Prisma.PostUncheckedUpdateManyWithoutOrganizationNestedInput
 }
 
+export type OrganizationCreateWithoutPostsInput = {
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  id?: string
+  name: string
+  description?: string | null
+  user: Prisma.UserCreateNestedOneWithoutOrganizationInput
+}
+
+export type OrganizationUncheckedCreateWithoutPostsInput = {
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deletedAt?: Date | string | null
+  id?: string
+  name: string
+  description?: string | null
+  userId: string
+}
+
+export type OrganizationCreateOrConnectWithoutPostsInput = {
+  where: Prisma.OrganizationWhereUniqueInput
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutPostsInput, Prisma.OrganizationUncheckedCreateWithoutPostsInput>
+}
+
+export type OrganizationUpsertWithoutPostsInput = {
+  update: Prisma.XOR<Prisma.OrganizationUpdateWithoutPostsInput, Prisma.OrganizationUncheckedUpdateWithoutPostsInput>
+  create: Prisma.XOR<Prisma.OrganizationCreateWithoutPostsInput, Prisma.OrganizationUncheckedCreateWithoutPostsInput>
+  where?: Prisma.OrganizationWhereInput
+}
+
+export type OrganizationUpdateToOneWithWhereWithoutPostsInput = {
+  where?: Prisma.OrganizationWhereInput
+  data: Prisma.XOR<Prisma.OrganizationUpdateWithoutPostsInput, Prisma.OrganizationUncheckedUpdateWithoutPostsInput>
+}
+
+export type OrganizationUpdateWithoutPostsInput = {
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  user?: Prisma.UserUpdateOneRequiredWithoutOrganizationNestedInput
+}
+
+export type OrganizationUncheckedUpdateWithoutPostsInput = {
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deletedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+}
+
+
+/**
+ * Count Type OrganizationCountOutputType
+ */
+
+export type OrganizationCountOutputType = {
+  posts: number
+}
+
+export type OrganizationCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  posts?: boolean | OrganizationCountOutputTypeCountPostsArgs
+}
+
+/**
+ * OrganizationCountOutputType without action
+ */
+export type OrganizationCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the OrganizationCountOutputType
+   */
+  select?: Prisma.OrganizationCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * OrganizationCountOutputType without action
+ */
+export type OrganizationCountOutputTypeCountPostsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PostWhereInput
+}
 
 
 export type OrganizationSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -458,6 +573,8 @@ export type OrganizationSelect<ExtArgs extends runtime.Types.Extensions.Internal
   description?: boolean
   userId?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  posts?: boolean | Prisma.Organization$postsArgs<ExtArgs>
+  _count?: boolean | Prisma.OrganizationCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["organization"]>
 
 export type OrganizationSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -495,6 +612,8 @@ export type OrganizationSelectScalar = {
 export type OrganizationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"createdAt" | "updatedAt" | "deletedAt" | "id" | "name" | "description" | "userId", ExtArgs["result"]["organization"]>
 export type OrganizationInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  posts?: boolean | Prisma.Organization$postsArgs<ExtArgs>
+  _count?: boolean | Prisma.OrganizationCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type OrganizationIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -507,6 +626,7 @@ export type $OrganizationPayload<ExtArgs extends runtime.Types.Extensions.Intern
   name: "Organization"
   objects: {
     user: Prisma.$UserPayload<ExtArgs>
+    posts: Prisma.$PostPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     createdAt: Date
@@ -911,6 +1031,7 @@ readonly fields: OrganizationFieldRefs;
 export interface Prisma__OrganizationClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  posts<T extends Prisma.Organization$postsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Organization$postsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PostPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1340,6 +1461,30 @@ export type OrganizationDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.
    * Limit how many Organizations to delete.
    */
   limit?: number
+}
+
+/**
+ * Organization.posts
+ */
+export type Organization$postsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Post
+   */
+  select?: Prisma.PostSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Post
+   */
+  omit?: Prisma.PostOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PostInclude<ExtArgs> | null
+  where?: Prisma.PostWhereInput
+  orderBy?: Prisma.PostOrderByWithRelationInput | Prisma.PostOrderByWithRelationInput[]
+  cursor?: Prisma.PostWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PostScalarFieldEnum | Prisma.PostScalarFieldEnum[]
 }
 
 /**
