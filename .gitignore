@@ -3,7 +3,7 @@
 /node_modules
 
 # Prisma 7 generated client
-/generated
+/prisma/generated
 
 # Logs
 logs
