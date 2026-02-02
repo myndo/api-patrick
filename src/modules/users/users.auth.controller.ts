@@ -63,7 +63,11 @@ export class UsersAuthController {
     const profile = await this.profilesService.createOne({
       lastName,
       firstName,
-      userId: user.id,
+      user: {
+        connect: {
+          id: user.id,
+        },
+      },
     });
 
     await this.profilesService.updateOne(

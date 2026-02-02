@@ -93,7 +93,15 @@ export class UsersService {
 
     const user = await this.client.user.findFirst({
       where,
-      select: UserSelect,
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        provider: true,
+        organizationId: true,
+        confirmedAt: true,
+        profile: true,
+      },
     });
 
     return user;
