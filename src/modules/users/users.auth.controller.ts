@@ -68,7 +68,7 @@ export class UsersAuthController {
 
     await this.profilesService.updateOne(
       { profileId: profile?.id },
-      { countryName: country },
+      { address: country },
     );
 
     const codeGenerate = generateNumber(6);
@@ -238,11 +238,7 @@ export class UsersAuthController {
 
   /** Reset password user */
   @Post(`/password/reset`)
-  async resetPassword(
-    @Res() res,
-    @Body() body: ResetPasswordUserDto,
-    @Headers('origin') origin: string,
-  ) {
+  async resetPassword(@Res() res, @Body() body: ResetPasswordUserDto) {
     const { email } = body;
 
     const findOneUser = await this.usersService.findOneBy({

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, User } from '@prisma/client';
 import { DatabaseService } from '../../app/database/database.service';
+import { Prisma, User } from '../../app/database/prisma';
 import {
   dateTimeNowUtc,
   lastDayMonth,
@@ -55,15 +55,16 @@ export class UsersService {
         : Object.assign(prismaWhere, { isSubscribed: false });
     }
 
-    const users = await this.client.user.findMany({
-      where: { ...prismaWhere, deletedAt: null },
-      skip: pagination.skip,
-      select: UserSelect,
-      take: pagination.take,
-      orderBy: pagination.orderBy,
-    });
     const rowCount = await this.client.user.count({
       where: { ...prismaWhere, deletedAt: null },
+    });
+
+    const users = await this.client.user.findMany({
+      where: { ...prismaWhere, deletedAt: null },
+      select: UserSelect,
+      skip: pagination.skip,
+      take: pagination.take,
+      orderBy: pagination.orderBy,
     });
 
     return withPagination({
@@ -100,18 +101,8 @@ export class UsersService {
         password: true,
         id: true,
         email: true,
-        member: true,
         confirmedAt: true,
-        organizationId: true,
         profile: true,
-        organization: {
-          select: {
-            name: true,
-            facebook: true,
-            youtube: true,
-            description: true,
-          },
-        },
       },
     });
 
@@ -141,25 +132,14 @@ export class UsersService {
 
   /** Create one User in database. */
   async createOne(options: CreateUsersOptions): Promise<User> {
-    const {
-      email,
-      token,
-      password,
-      provider,
-      isConfirmed,
-      confirmedAt,
-      organizationId,
-    } = options;
+    const { email, password, provider, confirmedAt } = options;
 
     const user = this.client.user.create({
       data: {
         email,
-        token,
         password,
         provider,
-        isConfirmed,
         confirmedAt,
-        organizationId,
       },
     });
 
@@ -224,29 +204,15 @@ export class UsersService {
     options: UpdateUsersOptions,
   ): Promise<User> {
     const { userId } = selections;
-    const {
-      email,
-      token,
-      member,
-      provider,
-      password,
-      confirmedAt,
-      isSubscribed,
-      organizationId,
-      deletedAt,
-    } = options;
+    const { email, provider, password, confirmedAt, deletedAt } = options;
 
     const user = this.client.user.update({
       where: { id: userId },
       data: {
         email,
-        token,
-        member,
         provider,
         password,
         confirmedAt,
-        isSubscribed,
-        organizationId,
         deletedAt,
       },
     });
@@ -256,32 +222,22 @@ export class UsersService {
 
   /** Get users transactions. */
   async getUsersTransactions() {
-    const [users, administrators, animalTypes] = await this.client.$transaction(
-      [
-        this.client.user.count({
-          where: {
-            deletedAt: null,
-          },
-        }),
-        this.client.user.count({
-          where: {
-            member: true,
-            deletedAt: null,
-          },
-        }),
-        this.client.animalType.count({
-          where: {
-            status: true,
-            deletedAt: null,
-          },
-        }),
-      ],
-    );
+    const [users, administrators] = await this.client.$transaction([
+      this.client.user.count({
+        where: {
+          deletedAt: null,
+        },
+      }),
+      this.client.user.count({
+        where: {
+          deletedAt: null,
+        },
+      }),
+    ]);
 
     return {
       users,
       administrators,
-      animalTypes,
     };
   }
 }

@@ -1,4 +1,4 @@
-import { Profile } from '@prisma/client';
+import { Profile } from '../../app/database/prisma';
 import { PaginationType } from '../../app/utils/pagination/with-pagination';
 
 export type GetProfilesSelections = {

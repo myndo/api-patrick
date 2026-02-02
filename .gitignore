@@ -2,6 +2,9 @@
 /dist
 /node_modules
 
+# Prisma 7 generated client
+/generated
+
 # Logs
 logs
 *.log

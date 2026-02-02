@@ -1,4 +1,4 @@
-import { User } from '@prisma/client';
+import { User } from '../../app/database/prisma';
 import * as argon2 from 'argon2';
 import { PaginationType } from '../../app/utils/pagination/with-pagination';
 

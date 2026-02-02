@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../../database/prisma';
 import { SortType } from './request-pagination.dto';
 
 export type WithPaginationResponse = {

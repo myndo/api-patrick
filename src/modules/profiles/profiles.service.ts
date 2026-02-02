@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, Profile } from '@prisma/client';
 import { DatabaseService } from '../../app/database/database.service';
+import { Prisma, Profile } from '../../app/database/prisma';
 import {
   WithPaginationResponse,
   withPagination,
@@ -78,34 +78,8 @@ export class ProfilesService {
 
   /** Create one Profile in database. */
   async createOne(options: CreateProfilesOptions): Promise<Profile> {
-    const {
-      city,
-      phone,
-      photo,
-      userId,
-      address,
-      lastName,
-      firstName,
-      countryName,
-      currencyId,
-      description,
-      profession,
-    } = options;
-
     const profile = this.client.profile.create({
-      data: {
-        city,
-        phone,
-        photo,
-        userId,
-        address,
-        lastName,
-        countryName,
-        firstName,
-        currencyId,
-        profession,
-        description,
-      },
+      data: options as Prisma.ProfileCreateInput,
     });
 
     return profile;
@@ -117,37 +91,10 @@ export class ProfilesService {
     options: UpdateProfilesOptions,
   ): Promise<Profile> {
     const { profileId } = selections;
-    const {
-      city,
-      phone,
-      photo,
-      address,
-      lastName,
-      countryName,
-      firstName,
-      currencyId,
-      description,
-      deletedAt,
-      testimonial,
-      profession,
-    } = options;
 
     const profile = this.client.profile.update({
       where: { id: profileId },
-      data: {
-        city,
-        phone,
-        photo,
-        address,
-        lastName,
-        firstName,
-        countryName,
-        currencyId,
-        description,
-        deletedAt,
-        profession,
-        testimonial,
-      },
+      data: options as Prisma.ProfileUpdateInput,
     });
 
     return profile;

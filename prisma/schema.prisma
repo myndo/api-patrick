@@ -1,27 +1,29 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Prisma 7: url/directUrl are configured in prisma.config.ts
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["metrics", "fullTextSearchPostgres"]
+  provider        = "prisma-client"
+  output          = "./generated/prisma"
+  previewFeatures = ["fullTextSearchPostgres"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 model User {
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-  id          String    @id @default(uuid())
-  email       String    @unique
-  password    String?
-  provider    String?
-  confirmedAt DateTime?
-  profile     Profile?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+  id             String        @id @default(uuid())
+  email          String        @unique
+  password       String?
+  provider       String?
+  organizationId String?
+  confirmedAt    DateTime?
+  profile        Profile?
+  organization   Organization?
 }
 
 model Profile {
@@ -30,7 +32,7 @@ model Profile {
   deletedAt   DateTime?
   id          String    @id @default(uuid())
   firstName   String
-  lastName    String?
+  lastName    String
   address     String?
   phone       String?
   photo       String?
@@ -40,4 +42,27 @@ model Profile {
   currencyId  String?
   userId      String    @unique
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Organization {
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  id          String    @id @default(uuid())
+  name        String
+  description String?   @db.Text
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts       Post[]
+}
+
+model Post {
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+  id             String       @id @default(uuid())
+  title          String
+  content        String       @db.Text
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }

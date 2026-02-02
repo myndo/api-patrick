@@ -99,11 +99,6 @@ export class UsersController {
         HttpStatus.NOT_FOUND,
       );
 
-    await this.usersService.updateOne(
-      { userId: findOneUser?.id },
-      { member: !findOneUser?.member },
-    );
-
     return reply({ res, results: 'Status changed successfully' });
   }
 
@@ -173,7 +168,7 @@ export class UsersController {
       );
     }
 
-    const payload = await this.checkUserService.verifyTokenCookie(token);
+    await this.checkUserService.verifyTokenCookie(token);
 
     return reply({ res, results: 'Invitation confirmed' });
   }
@@ -188,7 +183,7 @@ export class UsersController {
       );
     }
 
-    const payload = await this.checkUserService.verifyTokenCookie(token);
+    await this.checkUserService.verifyTokenCookie(token);
 
     return reply({ res, results: 'Collaboration rejected' });
   }
