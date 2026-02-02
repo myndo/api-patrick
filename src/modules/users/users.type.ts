@@ -13,8 +13,6 @@ export type GetUsersSelections = {
   days?: string;
   months?: string;
   year?: string;
-  member?: string;
-  isSubscribed?: string;
   organizationId?: string;
   pagination?: PrismaPagination;
 };

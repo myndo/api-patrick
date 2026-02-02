@@ -25,14 +25,17 @@ export class UsersService {
   constructor(private readonly client: DatabaseService) {}
 
   /** Get all users in database. */
-  async findAll(
-    selections: GetUsersSelections,
-  ): Promise<WithPaginationResponse | null> {
-    const prismaWhere = {} as Prisma.UserWhereInput;
-    const { pagination, search, member, isSubscribed } = selections;
+  async findAll({
+    pagination,
+    search,
+  }: GetUsersSelections): Promise<WithPaginationResponse | null> {
+    const where: FilterGroup<Prisma.UserWhereInput> = {
+      deletedAt: null,
+      AND: [],
+    };
 
     if (search) {
-      Object.assign(prismaWhere, {
+      where.AND.push({
         OR: [
           { email: { contains: search, mode: 'insensitive' } },
           { profile: { firstName: { contains: search, mode: 'insensitive' } } },
@@ -41,26 +44,12 @@ export class UsersService {
       });
     }
 
-    if (member) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      member === 'true'
-        ? Object.assign(prismaWhere, { member: true })
-        : Object.assign(prismaWhere, { member: false });
-    }
-
-    if (isSubscribed) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      isSubscribed === 'true'
-        ? Object.assign(prismaWhere, { isSubscribed: true })
-        : Object.assign(prismaWhere, { isSubscribed: false });
-    }
-
     const rowCount = await this.client.user.count({
-      where: { ...prismaWhere, deletedAt: null },
+      where,
     });
 
     const users = await this.client.user.findMany({
-      where: { ...prismaWhere, deletedAt: null },
+      where,
       select: UserSelect,
       skip: pagination.skip,
       take: pagination.take,

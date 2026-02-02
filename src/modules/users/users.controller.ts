@@ -21,7 +21,6 @@ import { UserAuthGuard } from './middleware';
 import { CheckUserService } from './middleware/check-user.service';
 import {
   ContributorConfirmDto,
-  GetUsers,
   UpdateOneEmailUserDto,
   UpdateUserPasswordDto,
 } from './users.dto';
@@ -61,19 +60,15 @@ export class UsersController {
     @Res() res,
     @Query() requestPaginationDto: RequestPaginationDto,
     @Query() query: SearchQueryDto,
-    @Query() queryUsers: GetUsers,
   ) {
     const { search } = query;
-    const { member, isSubscribed } = queryUsers;
 
     const { take, page, sort } = requestPaginationDto;
     const pagination = addPagination({ page, take, sort });
 
     const users = await this.usersService.findAll({
-      member,
       search,
       pagination,
-      isSubscribed,
     });
 
     return reply({ res, results: users });
