@@ -13,8 +13,7 @@ import {
 } from '@nestjs/common';
 
 import { config } from '../../app/config';
-import { ContributorStatusEnum } from '../../app/database/prisma';
-import { generateNumber } from '../../app/utils/commons';
+import { generateNumber, Slug } from '../../app/utils/commons';
 import {
   validation_login_cookie_setting,
   validation_verify_cookie_setting,
@@ -23,7 +22,10 @@ import { reply } from '../../app/utils/reply';
 import { ContributorsService } from '../contributors/contributors.service';
 import { ProfilesService } from '../profiles/profiles.service';
 import { authCodeConfirmationMail } from './mails/auth-code-confirmation-mail';
-import { CheckUserService, JwtToken } from './middleware/check-user.service';
+import {
+  CheckUserService,
+  TokenJwtModel,
+} from './middleware/check-user.service';
 import { Cookies } from './middleware/cookie.guard';
 import {
   ConfirmEmailUserDto,
@@ -64,6 +66,7 @@ export class UsersAuthController {
       organization: {
         create: {
           name: `${firstName} ${lastName}`,
+          slug: Slug(`${firstName} ${lastName}-${generateNumber(4)}`),
           description: country,
         },
       },
@@ -79,20 +82,20 @@ export class UsersAuthController {
       },
     });
 
-    await this.contributorsService.createOne({
-      description: country,
-      status: ContributorStatusEnum.CONTRIBUTOR,
-      user: {
-        connect: {
-          id: user.id,
-        },
-      },
-      organization: {
-        connect: {
-          id: user.organizationId,
-        },
-      },
-    });
+    // await this.contributorsService.createOne({
+    //   description: country,
+    //   status: ContributorStatusEnum.CONTRIBUTOR,
+    //   user: {
+    //     connect: {
+    //       id: user.id,
+    //     },
+    //   },
+    //   organization: {
+    //     connect: {
+    //       id: user.organizationId,
+    //     },
+    //   },
+    // });
 
     await this.profilesService.updateOne(
       { profileId: profile?.id },
@@ -101,12 +104,12 @@ export class UsersAuthController {
 
     const codeGenerate = generateNumber(6);
     const tokenUser = await this.checkUserService.createTokenCookie(
-      { userId: user?.id, code: codeGenerate } as JwtToken,
-      config.cookie_access.user.accessExpireVerify,
+      { userId: user?.id, code: codeGenerate } as TokenJwtModel,
+      config.cookie_access.accessExpire,
     );
 
     res.cookie(
-      config.cookie_access.user.nameVerify,
+      config.cookie_access.nameVerify,
       tokenUser,
       validation_verify_cookie_setting,
     );
@@ -119,7 +122,7 @@ export class UsersAuthController {
   /** Resend user code */
   @Get(`/resend-code`)
   async resendCode(@Res() res, @Cookies() cookies) {
-    const token = cookies[config.cookie_access.user.nameVerify];
+    const token = cookies[config.cookie_access.nameVerify];
 
     if (!token) {
       throw new HttpException(
@@ -130,8 +133,8 @@ export class UsersAuthController {
     const codeGenerate = generateNumber(6);
     const payload = await this.checkUserService.verifyTokenCookie(token);
     const tokenUser = await this.checkUserService.createTokenCookie(
-      { userId: payload?.userId, code: codeGenerate } as JwtToken,
-      config.cookie_access.user.accessExpireVerify,
+      { userId: payload?.userId, code: codeGenerate } as TokenJwtModel,
+      config.cookie_access.accessExpire,
     );
     const findOneUser = await this.usersService.findOneBy({
       userId: payload?.userId,
@@ -143,7 +146,7 @@ export class UsersAuthController {
       );
 
     res.cookie(
-      config.cookie_access.user.nameVerify,
+      config.cookie_access.nameVerify,
       tokenUser,
       validation_verify_cookie_setting,
     );
@@ -167,7 +170,7 @@ export class UsersAuthController {
   ) {
     const { user } = req;
     const { code } = body;
-    const token = cookies[config.cookie_access.user.nameVerify];
+    const token = cookies[config.cookie_access.nameVerify];
     if (!token)
       throw new HttpException(
         `Token not valid please change`,
@@ -187,11 +190,11 @@ export class UsersAuthController {
       { confirmedAt: new Date() },
     );
     const tokenUser = await this.checkUserService.createTokenCookie(
-      { userId: payload?.userId } as JwtToken,
-      config.cookie_access.user.accessExpireLogin,
+      { userId: payload?.userId },
+      config.cookie_access.accessExpire,
     );
     res.cookie(
-      config.cookie_access.user.nameLogin,
+      config.cookie_access.nameLogin,
       tokenUser,
       validation_login_cookie_setting,
     );
@@ -228,11 +231,11 @@ export class UsersAuthController {
 
     if (!findOneUser?.confirmedAt) {
       const tokenUserVerify = await this.checkUserService.createTokenCookie(
-        { userId: findOneUser?.id, code: codeGenerate } as JwtToken,
-        config.cookie_access.user.accessExpireVerify,
+        { userId: findOneUser?.id, code: codeGenerate },
+        config.cookie_access.accessExpire,
       );
       res.cookie(
-        config.cookie_access.user.nameVerify,
+        config.cookie_access.nameVerify,
         tokenUserVerify,
         validation_verify_cookie_setting,
       );
@@ -243,12 +246,12 @@ export class UsersAuthController {
       });
     } else {
       const tokenUser = await this.checkUserService.createTokenCookie(
-        { userId: findOneUser.id } as JwtToken,
-        config.cookie_access.user.accessExpireLogin,
+        { userId: findOneUser.id },
+        config.cookie_access.accessExpire,
       );
 
       res.cookie(
-        config.cookie_access.user.nameLogin,
+        config.cookie_access.nameLogin,
         tokenUser,
         validation_login_cookie_setting,
       );
@@ -280,8 +283,8 @@ export class UsersAuthController {
       );
 
     const token = await this.checkUserService.createTokenCookie(
-      { userId: findOneUser.id } as JwtToken,
-      config.cookie_access.user.accessExpireVerify,
+      { userId: findOneUser.id },
+      config.cookie_access.accessExpire,
     );
 
     // await authPasswordResetMail({ email, token, urlOrigin: origin });
@@ -345,11 +348,11 @@ export class UsersAuthController {
   @Get(`/logout`)
   async logout(@Res() res) {
     res.clearCookie(
-      config.cookie_access.user.nameLogin,
+      config.cookie_access.nameLogin,
       validation_login_cookie_setting,
     );
     res.clearCookie(
-      config.cookie_access.user.nameVerify,
+      config.cookie_access.nameVerify,
       validation_verify_cookie_setting,
     );
 

@@ -1,64 +1,38 @@
-import { PutObjectCommandInput } from '@aws-sdk/client-s3';
-import { S3 } from 'aws-sdk';
-import axios from 'axios';
+import {
+  PutObjectCommand,
+  PutObjectCommandInput,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { config } from '../../app/config';
 
-export const awsS3ServiceAdapter = async (data: {
-    file: PutObjectCommandInput['Body'];
-    fileName: string;
-    mimeType: string;
-    folder: string;
-}): Promise<any> => {
-    const { file, fileName, mimeType, folder } = data;
+export const cloudflareR2ServiceAdapter = async (data: {
+  file: PutObjectCommandInput['Body'];
+  fileName: string;
+  mimeType: string;
+  folder: string;
+}) => {
+  const { file, fileName, mimeType, folder } = data;
 
-    const awsClient = new S3({
-        region: config.implementations.aws.region,
-        accessKeyId: config.implementations.aws.accessKeyId,
-        secretAccessKey: config.implementations.aws.secretKey,
-    });
+  const cloudflareR2Client = new S3Client({
+    region: config.implementations.cloudflareR2.region,
+    endpoint: config.implementations.cloudflareR2.endpoint,
+    credentials: {
+      accessKeyId: config.implementations.cloudflareR2.accessKeyId,
+      secretAccessKey: config.implementations.cloudflareR2.secretKey,
+    },
+  });
 
-    const params = {
-        Bucket: `${config.implementations.aws.bucket}/${folder}`,
-        Key: fileName,
-        Body: file,
-        ACL: 'public-read',
-        ContentType: mimeType,
-        ContentDisposition: 'inline',
-        CreateBucketConfiguration: {
-            LocationConstraint: config.implementations.aws.region,
-        },
-    };
+  const uniqueKey = `${folder}/${fileName}`;
+  const command = new PutObjectCommand({
+    Bucket: config.implementations.cloudflareR2.bucket,
+    Key: uniqueKey,
+    Body: file,
+    ACL: 'public-read',
+    ContentType: mimeType,
+    ContentDisposition: 'inline',
+  });
 
-    const responseAws = file ? await awsClient.upload(params).promise() : '';
-    const response = { ...responseAws };
-    return response;
-};
-
-export const getFileToAws = async ({
-    folder,
-    fileName,
-}: {
-    folder: string;
-    fileName: string;
-}): Promise<{ fileBuffer: Buffer; contentType: string; imageUrl: string }> => {
-    const imageUrl = `https://${config.implementations.aws.bucket}.s3.${config.implementations.aws.region}.amazonaws.com/${folder}/${fileName}`;
-    const imageResponse = await axios.get(imageUrl, {
-        responseType: 'arraybuffer',
-    });
-    const fileBuffer = Buffer.from(imageResponse.data, 'binary');
-    const contentType = imageResponse.headers['content-type'];
-
-    return { fileBuffer, contentType, imageUrl };
-};
-
-export const getFileURLToAws = async (
-    url: string
-): Promise<{ fileBuffer: Buffer; contentType: string }> => {
-    const imageResponse = await axios.get(url, {
-        responseType: 'arraybuffer',
-    });
-    const fileBuffer = Buffer.from(imageResponse.data, 'binary');
-    const contentType = imageResponse.headers['content-type'];
-
-    return { fileBuffer, contentType };
+  await cloudflareR2Client.send(command);
+  const Location = `${config.implementations.cloudflareR2.urlRed}/${uniqueKey}`;
+  return { Location };
 };

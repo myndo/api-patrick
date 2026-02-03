@@ -25,6 +25,7 @@ model User {
   profile        Profile?
   organization   Organization?
   contributors   Contributor[]
+  uploads        Upload[]
 }
 
 model Profile {
@@ -36,7 +37,7 @@ model Profile {
   lastName    String
   address     String?
   phone       String?
-  photo       String?
+  image       String?
   description String?   @db.Text
   testimonial String?   @db.Text
   city        String?
@@ -51,11 +52,14 @@ model Organization {
   deletedAt    DateTime?
   id           String        @id @default(uuid())
   name         String
+  email        String?
+  slug         String        @unique
   description  String?       @db.Text
   userId       String        @unique
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   posts        Post[]
   contributors Contributor[]
+  uploads      Upload[]
 }
 
 model Contributor {
@@ -65,12 +69,18 @@ model Contributor {
   id             String                @id @default(uuid())
   description    String?               @db.Text
   userCreatedId  String?
+  role           ContributorRoleEnum
   confirmedAt    DateTime?
   status         ContributorStatusEnum
   userId         String?
   user           User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   organizationId String?
   organization   Organization?         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+enum ContributorRoleEnum {
+  ADMIN
+  USER
 }
 
 enum ContributorStatusEnum {
@@ -88,4 +98,39 @@ model Post {
   content        String       @db.Text
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model Upload {
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+  id             String        @id @default(uuid())
+  url            String
+  uploadableId   String?
+  uploadType     String?
+  size           Int?
+  type           String?
+  name           String?
+  path           String?
+  preview        String?
+  status         String?
+  model          QueryTypeEnum
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+enum QueryTypeEnum {
+  POST
+  SHOP
+  MESSAGE
+  CATALOG
+  PRODUCT
+  CONTACT
+  INVOICE
+  EXPENSE
+  PROFILE
+  VARIANT
+  CHECKOUT
 }

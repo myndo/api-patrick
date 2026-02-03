@@ -2,6 +2,28 @@ import { murmurhash2_x86_32, murmurhash3_x64_128 } from 'number-generator';
 import slugify from 'slugify';
 import { v4 as uuidv4 } from 'uuid';
 
+export interface KeyAsString {
+  [key: string]: string;
+}
+
+export const capitalizeName = (s: string) => {
+  if (typeof s !== 'string') return '';
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+
+export const capitalizeFirstLetter = (
+  firstItem: string,
+  secondItem: string,
+) => {
+  return (
+    capitalizeName(firstItem).charAt(0) + capitalizeName(secondItem).charAt(0)
+  ).toUpperCase();
+};
+
+export const capitalizeOneFirstLetter = (firstItem: string) => {
+  return capitalizeName(firstItem).charAt(0).toUpperCase();
+};
+
 export const generateUUID = () => {
   return uuidv4();
 };

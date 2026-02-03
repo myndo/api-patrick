@@ -1,6 +1,13 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
+export enum EnvironmentEnum {
+  Local = 'local',
+  Production = 'production',
+  Dev = 'dev',
+  Demo = 'demo',
+}
+
 export const config = {
   /**
    * Url site
@@ -13,20 +20,20 @@ export const config = {
   /**
    * Node environment
    */
-  environment: process.env.NODE_ENV || 'dev',
+  environment:
+    (process.env.NODE_ENV as EnvironmentEnum) || EnvironmentEnum.Local,
   /**
    * Cookie configuration
    */
-
   cookieKey: process.env.COOKIE_KEY || '@3%NE8IksyHK4yC5POFurDCAVW@FqxBe',
   cookie_access: {
-    user: {
-      nameLogin: process.env.COOKIE_NAME_LOGIN || 'x-user',
-      accessExpireLogin: process.env.COOKIE_ACCESS_EXPIRE || '86400000000',
-      nameVerify: process.env.COOKIE_NAME_LOGIN || 'x-verify-code',
-      accessExpireVerify:
-        process.env.COOKIE_VALIDATION_TOKEN_EXPIRE || '300000000000',
-    },
+    domain: '.vedcausa.com',
+    jwtUser: process.env.COOKIE_JWT_USER || 'jwt-access-user',
+    nameLogin: process.env.COOKIE_NAME_LOGIN || 'x-user',
+    accessExpire: process.env.COOKIE_ACCESS_EXPIRE || '32000000000', //32000000000 10000000000
+    jwtVerify: process.env.COOKIE_JWT_USER || 'jwt-access-verify',
+    nameVerify: process.env.COOKIE_NAME_VERIFY || 'x-verify',
+    verifyExpire: process.env.COOKIE_VERIFY_EXPIRE || '1800000', // 30 minutes
   },
   /**
    * Site
@@ -130,14 +137,15 @@ export const config = {
       email: process.env.MAIL_SMTP_EMAIL,
     },
     /**
-     * Aws smtp
+     * Cloudflare R2
      */
-    awsSMTP: {
-      host: process.env.AWS_SMTP_HOST,
-      port: Number(process.env.AWS_SMTP_PORT),
-      user: process.env.AWS_SMTP_USERNAME,
-      pass: process.env.AWS_SMTP_PASSWORD,
-      email: process.env.AWS_SMTP_EMAIL,
+    cloudflareR2: {
+      region: 'auto',
+      bucket: process.env.CLOODFLARE_S3_BUCKET,
+      urlRed: process.env.CLOODFLARE_S3_URL_RED,
+      endpoint: process.env.CLOODFLARE_S3_URL_ENDPOINT,
+      accessKeyId: process.env.CLOODFLARE_S3_ACCESS_KEY_ID,
+      secretKey: process.env.CLOODFLARE_S3_ACCESS_SECRET_KEY,
     },
     /**
      * Resend smtp

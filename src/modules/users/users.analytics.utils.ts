@@ -4,7 +4,7 @@ import {
   formateMMDate,
   formateMMNumericDate,
   formateYYYYDate,
-} from '../../app/utils/commons/formate-date';
+} from '../../app/utils/formate-date';
 
 type valueType = {
   count: number;

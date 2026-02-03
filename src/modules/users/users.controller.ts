@@ -245,7 +245,7 @@ export class UsersController {
 
     await this.usersService.updateOne({ userId }, { deletedAt: new Date() });
 
-    res.clearCookie(config.cookie_access.user.nameLogin);
+    res.clearCookie(config.cookie_access.nameLogin);
 
     return reply({ res, results: 'User deleted successfully' });
   }

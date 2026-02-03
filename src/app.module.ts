@@ -3,6 +3,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { DatabaseModule } from './app/database/database.module';
 import { ContributorsModule } from './modules/contributors/contributors.module';
 import { ProfilesModule } from './modules/profiles/profiles.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -11,6 +12,7 @@ import { UsersModule } from './modules/users/users.module';
     DatabaseModule,
     ProfilesModule,
     UsersModule,
+    UploadsModule,
     ContributorsModule,
   ],
 })

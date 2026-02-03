@@ -13,6 +13,25 @@ export type SortType = 'asc' | 'desc';
 
 export type ProductStatus = 'ACTIVE' | 'PENDING';
 
+export enum QueryTypeEnum {
+  Post = 'POST',
+  Shop = 'SHOP',
+  Message = 'MESSAGE',
+  Catalog = 'CATALOG',
+  Product = 'PRODUCT',
+  Contact = 'CONTACT',
+  Invoice = 'INVOICE',
+  Expense = 'EXPENSE',
+  Profile = 'PROFILE',
+  Variant = 'VARIANT',
+  Checkout = 'CHECKOUT',
+  Category = 'CATEGORY',
+  Warehouse = 'WAREHOUSE',
+  Subcategory = 'SUBCATEGORY',
+  ExpenseItem = 'EXPENSEITEM',
+  Organization = 'ORGANIZATION',
+}
+
 export class RequestPaginationDto {
   @IsNotEmpty()
   @IsInt()

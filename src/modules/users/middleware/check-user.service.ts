@@ -1,16 +1,17 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { JwtPayload, sign, verify } from 'jsonwebtoken';
 import { config } from '../../../app/config';
-export type JwtToken = {
+
+export type TokenJwtModel = {
   userId: string;
-  organizationId: string;
   code: string;
-  email: string;
-  inviter?: string;
-  reqUserId?: string;
-  contributorId?: string;
-  organizationName?: string;
+  email?: string;
+  currency?: string;
+  pointOfSaleId?: string;
+  organizationId: string;
+  userPointOfSaleId?: string;
 };
+
 @Injectable()
 export class CheckUserService {
   constructor() {}

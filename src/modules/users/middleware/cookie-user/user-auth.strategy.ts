@@ -4,7 +4,7 @@ import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { config } from '../../../../app/config';
 import { UsersService } from '../../users.service';
-import { JwtToken } from '../check-user.service';
+import { TokenJwtModel } from '../check-user.service';
 
 @Injectable()
 export class UserAuthStrategy extends PassportStrategy(
@@ -25,15 +25,15 @@ export class UserAuthStrategy extends PassportStrategy(
   private static extractJwt(req: Request): string | null {
     if (
       req.cookies &&
-      config.cookie_access.user.nameLogin in req.cookies &&
-      req.cookies[config.cookie_access.user.nameLogin].length > 0
+      config.cookie_access.nameLogin in req.cookies &&
+      req.cookies[config.cookie_access.nameLogin].length > 0
     ) {
-      return req.cookies[config.cookie_access.user.nameLogin];
+      return req.cookies[config.cookie_access.nameLogin];
     }
     return null;
   }
 
-  async validate(payload: JwtToken): Promise<any> {
+  async validate(payload: TokenJwtModel) {
     const user = await this.usersService.findOneBy({ userId: payload?.userId });
     if (!user) throw new UnauthorizedException('Invalid user');
 
