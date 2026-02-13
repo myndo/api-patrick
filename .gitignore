@@ -4,6 +4,13 @@
 
 # Prisma 7 generated client
 /prisma/generated
+GOOGLE_SEARCH_CONSOLE_INTEGRATION.md
+test-google-search-console.http
+test-rtbhouse.http
+test-shopify.http
+SHOPIFY_QUICKSTART.md
+SHOPIFY_INTEGRATION.md
+RTBHOUSE_INTEGRATION.md
 
 # Logs
 logs

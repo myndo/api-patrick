@@ -13,19 +13,17 @@ datasource db {
 }
 
 model User {
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
-  id             String        @id @default(uuid())
-  email          String        @unique
+  id             String    @id @default(uuid())
+  email          String    @unique
   password       String?
   provider       String?
   organizationId String?
   confirmedAt    DateTime?
   profile        Profile?
-  organization   Organization?
-  contributors   Contributor[]
-  uploads        Upload[]
+  organization   Job?      @relation(fields: [organizationId], references: [id])
 }
 
 model Profile {
@@ -46,91 +44,25 @@ model Profile {
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Organization {
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  deletedAt    DateTime?
-  id           String        @id @default(uuid())
-  name         String
-  email        String?
-  slug         String        @unique
-  description  String?       @db.Text
-  userId       String        @unique
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  posts        Post[]
-  contributors Contributor[]
-  uploads      Upload[]
-}
-
-model Contributor {
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
-  deletedAt      DateTime?
-  id             String                @id @default(uuid())
-  description    String?               @db.Text
-  userCreatedId  String?
-  role           ContributorRoleEnum
-  confirmedAt    DateTime?
-  status         ContributorStatusEnum
-  userId         String?
-  user           User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organizationId String?
-  organization   Organization?         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-}
-
-enum ContributorRoleEnum {
-  ADMIN
-  USER
-}
-
-enum ContributorStatusEnum {
-  CONTRIBUTOR
-  INVITED_CONTRIBUTOR
-  NEW_CONTRIBUTOR
-}
-
-model Post {
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  deletedAt      DateTime?
-  id             String       @id @default(uuid())
-  title          String
-  content        String       @db.Text
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-}
-
-model Upload {
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  deletedAt      DateTime?
-  id             String        @id @default(uuid())
-  url            String
-  uploadableId   String?
-  uploadType     String?
-  size           Int?
-  type           String?
-  name           String?
-  path           String?
-  preview        String?
-  status         String?
-  model          QueryTypeEnum
-  userId         String
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organizationId String
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-}
-
-enum QueryTypeEnum {
-  POST
-  SHOP
-  MESSAGE
-  CATALOG
-  PRODUCT
-  CONTACT
-  INVOICE
-  EXPENSE
-  PROFILE
-  VARIANT
-  CHECKOUT
+model Job {
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+  id               String    @id @default(uuid())
+  day              DateTime?
+  campaign         String?
+  investment       Float?
+  status           String?
+  clicksCount      Int       @default(0)
+  conversionsCount Int       @default(0)
+  clientName       String?
+  conversionsValue Float?    @default(0)
+  country          String?
+  currency         String?
+  impsCount        Int       @default(0)
+  campaignCost     Float?    @default(0)
+  userSegment      String?
+  provider         String?
+  providerJobId    String?
+  users            User[]
 }

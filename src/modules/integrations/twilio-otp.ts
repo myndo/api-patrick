@@ -7,22 +7,22 @@ const verifySid = config.implementations.twilio.verifySid;
 const client = require('twilio')(accountSid, authToken);
 
 export const otpMessageSend = async (options: { phone: string }) => {
-    const { phone } = options;
-    const otpMessageVoce = await client.verify.v2
-        .services(verifySid)
-        .verifications.create({ to: phone, channel: 'sms' });
+  const { phone } = options;
+  const otpMessageVoce = await client.verify.v2
+    .services(verifySid)
+    .verifications.create({ to: phone, channel: 'sms' });
 
-    return otpMessageVoce;
+  return otpMessageVoce;
 };
 
 export const otpVerifySid = async (options: {
-    phone: string;
-    code: string;
+  phone: string;
+  code: string;
 }) => {
-    const { phone, code } = options;
-    const otpMessageVoce = await client.verify.v2
-        .services(verifySid)
-        .verificationChecks.create({ to: phone, code });
+  const { phone, code } = options;
+  const otpMessageVoce = await client.verify.v2
+    .services(verifySid)
+    .verificationChecks.create({ to: phone, code });
 
-    return otpMessageVoce;
+  return otpMessageVoce;
 };

@@ -17,7 +17,6 @@ import {
   GetUsersSelections,
   UpdateUsersOptions,
   UpdateUsersSelections,
-  UserSelect,
 } from './users.type';
 
 @Injectable()
@@ -50,7 +49,6 @@ export class UsersService {
 
     const users = await this.client.user.findMany({
       where,
-      select: UserSelect,
       skip: pagination.skip,
       take: pagination.take,
       orderBy: pagination.orderBy,
@@ -124,7 +122,6 @@ export class UsersService {
 
     const user = await this.client.user.findFirst({
       where,
-      select: UserSelect,
     });
 
     return user;

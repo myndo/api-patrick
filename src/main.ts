@@ -14,7 +14,7 @@ import { config } from './app/config';
 async function bootstrap() {
   // config.update({});
   const port = config.port;
-  const version = config.api.version;
+  const version = 'v1';
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix(`/api/${version}`);
   const withList = config.url.allowedOrigins?.split(',') || [
