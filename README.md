@@ -40,6 +40,16 @@ npm run db:push
 6. Add authorized redirect URI: `http://localhost:8000/oauth2callback`
 7. Copy **Client ID** and **Client Secret**
 
+#### Zemanta (Teads DSP) Setup
+
+1. Go to [Teads DSP Dashboard](https://dsp.outbrain.com/)
+2. Navigate to [Applications](https://dsp.outbrain.com/o/applications/)
+3. Click **New Application** button
+4. Enter a name for your application
+5. Click **Save**
+6. Copy the **Client ID** and **Client Secret** from the application details
+7. The credentials use OAuth2 client credentials flow for authentication
+
 
 ### Development Mode
 
@@ -180,6 +190,85 @@ Manage products, orders, and customers.
       "position": 5.2
     }
   ]
+}
+```
+
+### Zemanta (Teads DSP) Integration
+
+Manage advertising accounts, campaigns, and budgets on Teads DSP platform.
+
+**Available Endpoints:**
+- `GET /api/v1/zemanta/accounts` - List all accounts
+- `GET /api/v1/zemanta/accounts/:accountId` - Get account details
+- `PUT /api/v1/zemanta/accounts/:accountId` - Update account
+- `POST /api/v1/zemanta/accounts` - Create new account
+- `GET /api/v1/zemanta/accounts/:accountId/sources` - Get account sources
+- `GET /api/v1/zemanta/accounts/:accountId/credits` - Get account credits
+- `GET /api/v1/zemanta/accounts/:accountId/credits/:creditId` - Get credit details
+
+**Example Request (List Accounts):**
+```http
+GET /api/v1/zemanta/accounts?includeArchived=false&includeDeliveryStatus=true
+```
+
+**Example Response:**
+```json
+{
+  "message": "Accounts retrieved successfully",
+  "data": {
+    "accounts": [
+      {
+        "id": "186",
+        "agencyId": "1",
+        "name": "My Account 1",
+        "targeting": {
+          "publisherGroups": {
+            "included": ["153"],
+            "excluded": ["154"]
+          }
+        },
+        "frequencyCapping": 10,
+        "deliveryStatus": "ACTIVE"
+      }
+    ]
+  }
+}
+```
+
+**Example Request (Create Account):**
+```json
+{
+  "name": "New Campaign Account",
+  "agencyId": "1",
+  "currency": "USD",
+  "frequencyCapping": 10,
+  "defaultBrandName": "My Brand",
+  "inventoryAccessLevel": "EXPANDED"
+}
+```
+
+**Example Request (Get Account Credits):**
+```http
+GET /api/v1/zemanta/accounts/186/credits
+```
+
+**Example Response:**
+```json
+{
+  "message": "Account credits retrieved successfully",
+  "data": {
+    "credits": [
+      {
+        "id": "861",
+        "startDate": "2026-01-01",
+        "endDate": "2026-11-05",
+        "total": "1000.0000",
+        "allocated": "400.0000",
+        "available": "600.0000",
+        "currency": "EUR"
+      }
+    ]
+  }
 }
 ```
 

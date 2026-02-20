@@ -66,3 +66,125 @@ model Job {
   providerJobId    String?
   users            User[]
 }
+
+model TopQuery {
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  id          String    @id @default(uuid())
+  siteUrl     String
+  query       String
+  clicks      Int       @default(0)
+  impressions Int       @default(0)
+  ctr         Float     @default(0)
+  position    Float     @default(0)
+  startDate   DateTime
+  endDate     DateTime
+
+  @@index([siteUrl, startDate, endDate])
+  @@index([query])
+}
+
+model TopPage {
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  id          String    @id @default(uuid())
+  siteUrl     String
+  page        String
+  clicks      Int       @default(0)
+  impressions Int       @default(0)
+  ctr         Float     @default(0)
+  position    Float     @default(0)
+  startDate   DateTime
+  endDate     DateTime
+
+  @@index([siteUrl, startDate, endDate])
+  @@index([page])
+}
+
+model PerformanceByCountry {
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  id          String    @id @default(uuid())
+  siteUrl     String
+  country     String
+  clicks      Int       @default(0)
+  impressions Int       @default(0)
+  ctr         Float     @default(0)
+  position    Float     @default(0)
+  startDate   DateTime
+  endDate     DateTime
+
+  @@index([siteUrl, startDate, endDate])
+  @@index([country])
+}
+
+model PerformanceByDevice {
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  id          String    @id @default(uuid())
+  siteUrl     String
+  device      String
+  clicks      Int       @default(0)
+  impressions Int       @default(0)
+  ctr         Float     @default(0)
+  position    Float     @default(0)
+  startDate   DateTime
+  endDate     DateTime
+
+  @@index([siteUrl, startDate, endDate])
+  @@index([device])
+}
+
+model ZemantaCampaign {
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  deletedAt        DateTime?
+  id               String                  @id // Zemanta campaign ID
+  accountId        String
+  accountName      String?
+  currency         String?
+  agencyName       String?
+  campaignManager  String?
+  name             String
+  archived         Boolean                 @default(false)
+  iabCategory      String?
+  frequencyCapping Int?
+  deliveryStatus   String?
+  totalCost        String?
+  impressions      Int?
+  clicks           Int?
+  cpc              String?
+  statsFrom        DateTime?
+  statsTo          DateTime?
+  budgets          ZemantaCampaignBudget[]
+
+  @@index([accountId])
+  @@index([archived])
+  @@index([statsFrom, statsTo])
+}
+
+model ZemantaCampaignBudget {
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  deletedAt  DateTime?
+  id         String          @id // Zemanta budget ID
+  campaignId String
+  creditId   String
+  amount     String
+  margin     String?
+  comment    String?
+  startDate  DateTime
+  endDate    DateTime
+  state      String
+  spend      String
+  available  String
+  campaign   ZemantaCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([state])
+  @@index([startDate, endDate])
+}

@@ -1,11 +1,12 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { GoogleSearchConsoleAdapter } from '../integrations/google-search-console-adapter';
+import { DatabaseService } from '../../app/database/database.service';
 
 @Injectable()
 export class GoogleSearchConsoleService {
   private gscAdapter: GoogleSearchConsoleAdapter;
 
-  constructor() {
+  constructor(private readonly databaseService: DatabaseService) {
     this.gscAdapter = new GoogleSearchConsoleAdapter({
       clientId: process.env.GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
@@ -110,6 +111,55 @@ export class GoogleSearchConsoleService {
   }
 
   /**
+   * Get and save top queries to database
+   */
+  async getAndSaveTopQueries(
+    accessToken: string,
+    siteUrl: string,
+    startDate: string,
+    endDate: string,
+    limit: number = 25,
+  ) {
+    try {
+      this.gscAdapter.setCredentials(accessToken);
+      const queries = await this.gscAdapter.getTopQueries(
+        siteUrl,
+        startDate,
+        endDate,
+        limit,
+      );
+
+      // Save to database
+      const savedQueries = [];
+      for (const query of queries) {
+        const keys = query.keys || [];
+        const queryText = keys[0] || 'unknown';
+
+        const saved = await this.databaseService.topQuery.create({
+          data: {
+            siteUrl,
+            query: queryText,
+            clicks: query.clicks || 0,
+            impressions: query.impressions || 0,
+            ctr: query.ctr || 0,
+            position: query.position || 0,
+            startDate: new Date(startDate),
+            endDate: new Date(endDate),
+          },
+        });
+        savedQueries.push(saved);
+      }
+
+      return { queries, saved: savedQueries.length };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get and save top queries: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
    * Get top pages
    */
   async getTopPages(
@@ -131,6 +181,55 @@ export class GoogleSearchConsoleService {
     } catch (error) {
       throw new HttpException(
         `Failed to get top pages: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get and save top pages to database
+   */
+  async getAndSaveTopPages(
+    accessToken: string,
+    siteUrl: string,
+    startDate: string,
+    endDate: string,
+    limit: number = 25,
+  ) {
+    try {
+      this.gscAdapter.setCredentials(accessToken);
+      const pages = await this.gscAdapter.getTopPages(
+        siteUrl,
+        startDate,
+        endDate,
+        limit,
+      );
+
+      // Save to database
+      const savedPages = [];
+      for (const page of pages) {
+        const keys = page.keys || [];
+        const pageUrl = keys[0] || 'unknown';
+
+        const saved = await this.databaseService.topPage.create({
+          data: {
+            siteUrl,
+            page: pageUrl,
+            clicks: page.clicks || 0,
+            impressions: page.impressions || 0,
+            ctr: page.ctr || 0,
+            position: page.position || 0,
+            startDate: new Date(startDate),
+            endDate: new Date(endDate),
+          },
+        });
+        savedPages.push(saved);
+      }
+
+      return { pages, saved: savedPages.length };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get and save top pages: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -162,6 +261,53 @@ export class GoogleSearchConsoleService {
   }
 
   /**
+   * Get and save performance by country to database
+   */
+  async getAndSavePerformanceByCountry(
+    accessToken: string,
+    siteUrl: string,
+    startDate: string,
+    endDate: string,
+  ) {
+    try {
+      this.gscAdapter.setCredentials(accessToken);
+      const countries = await this.gscAdapter.getPerformanceByCountry(
+        siteUrl,
+        startDate,
+        endDate,
+      );
+
+      // Save to database
+      const savedCountries = [];
+      for (const countryData of countries) {
+        const keys = countryData.keys || [];
+        const country = keys[0] || 'unknown';
+
+        const saved = await this.databaseService.performanceByCountry.create({
+          data: {
+            siteUrl,
+            country,
+            clicks: countryData.clicks || 0,
+            impressions: countryData.impressions || 0,
+            ctr: countryData.ctr || 0,
+            position: countryData.position || 0,
+            startDate: new Date(startDate),
+            endDate: new Date(endDate),
+          },
+        });
+        savedCountries.push(saved);
+      }
+
+      return { countries, saved: savedCountries.length };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get and save performance by country: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
    * Get performance by device
    */
   async getPerformanceByDevice(
@@ -181,6 +327,53 @@ export class GoogleSearchConsoleService {
     } catch (error) {
       throw new HttpException(
         `Failed to get performance by device: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get and save performance by device to database
+   */
+  async getAndSavePerformanceByDevice(
+    accessToken: string,
+    siteUrl: string,
+    startDate: string,
+    endDate: string,
+  ) {
+    try {
+      this.gscAdapter.setCredentials(accessToken);
+      const devices = await this.gscAdapter.getPerformanceByDevice(
+        siteUrl,
+        startDate,
+        endDate,
+      );
+
+      // Save to database
+      const savedDevices = [];
+      for (const deviceData of devices) {
+        const keys = deviceData.keys || [];
+        const device = keys[0] || 'unknown';
+
+        const saved = await this.databaseService.performanceByDevice.create({
+          data: {
+            siteUrl,
+            device,
+            clicks: deviceData.clicks || 0,
+            impressions: deviceData.impressions || 0,
+            ctr: deviceData.ctr || 0,
+            position: deviceData.position || 0,
+            startDate: new Date(startDate),
+            endDate: new Date(endDate),
+          },
+        });
+        savedDevices.push(saved);
+      }
+
+      return { devices, saved: savedDevices.length };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get and save performance by device: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

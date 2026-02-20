@@ -120,7 +120,7 @@ export class GoogleSearchConsoleController {
   @Post('/top-queries')
   async get_Top_Queries(@Res() res, @Body() body: TopQueriesDto) {
     const { accessToken, siteUrl, startDate, endDate, limit } = body;
-    const result = await this.googleSearchConsoleService.getTopQueries(
+    const result = await this.googleSearchConsoleService.getAndSaveTopQueries(
       accessToken,
       siteUrl,
       startDate,
@@ -133,7 +133,7 @@ export class GoogleSearchConsoleController {
       results: {
         data: result,
         status: HttpStatus.OK,
-        message: `Data fetched successfully`,
+        message: `Data fetched and saved successfully`,
       },
     });
   }
@@ -144,7 +144,7 @@ export class GoogleSearchConsoleController {
   @Post('/top-pages')
   async get_Top_Pages(@Res() res, @Body() body: TopPagesDto) {
     const { accessToken, siteUrl, startDate, endDate, limit } = body;
-    const result = await this.googleSearchConsoleService.getTopPages(
+    const result = await this.googleSearchConsoleService.getAndSaveTopPages(
       accessToken,
       siteUrl,
       startDate,
@@ -157,7 +157,7 @@ export class GoogleSearchConsoleController {
       results: {
         data: result,
         status: HttpStatus.OK,
-        message: `Data fetched successfully`,
+        message: `Data fetched and saved successfully`,
       },
     });
   }
@@ -172,7 +172,7 @@ export class GoogleSearchConsoleController {
   ) {
     const { accessToken, siteUrl, startDate, endDate } = body;
     const result =
-      await this.googleSearchConsoleService.getPerformanceByCountry(
+      await this.googleSearchConsoleService.getAndSavePerformanceByCountry(
         accessToken,
         siteUrl,
         startDate,
@@ -183,7 +183,7 @@ export class GoogleSearchConsoleController {
       results: {
         data: result,
         status: HttpStatus.OK,
-        message: `Data fetched successfully`,
+        message: `Data fetched and saved successfully`,
       },
     });
   }
@@ -197,18 +197,19 @@ export class GoogleSearchConsoleController {
     @Body() body: PerformanceByDeviceDto,
   ) {
     const { accessToken, siteUrl, startDate, endDate } = body;
-    const result = await this.googleSearchConsoleService.getPerformanceByDevice(
-      accessToken,
-      siteUrl,
-      startDate,
-      endDate,
-    );
+    const result =
+      await this.googleSearchConsoleService.getAndSavePerformanceByDevice(
+        accessToken,
+        siteUrl,
+        startDate,
+        endDate,
+      );
     return reply({
       res,
       results: {
         data: result,
         status: HttpStatus.OK,
-        message: `Data fetched successfully`,
+        message: `Data fetched and saved successfully`,
       },
     });
   }
