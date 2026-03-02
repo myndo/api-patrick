@@ -188,3 +188,26 @@ model ZemantaCampaignBudget {
   @@index([state])
   @@index([startDate, endDate])
 }
+
+model TradeDoublerReport {
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  id              String    @id @default(uuid())
+  date            DateTime
+  campaignId      Int
+  campaignName    String
+  status          String?
+  clicks          Int       @default(0)
+  impressions     Int       @default(0)
+  conversions     Int       @default(0)
+  conversionValue Float     @default(0)
+  cost            Float     @default(0)
+  country         String?
+  currency        String?
+
+  @@unique([date, campaignId, country])
+  @@index([date])
+  @@index([campaignId])
+  @@index([country])
+}

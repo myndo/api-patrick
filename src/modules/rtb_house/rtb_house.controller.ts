@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpException,
   HttpStatus,
   Post,
@@ -33,29 +34,53 @@ export class RtbHouseController {
 
   /** Fetch RTBHouse data and save to database */
   @Post(`/jobs/create`)
-  async fetch_RTBHouse_Data(@Res() res, @Body() body: FetchRTBHouseDataDto) {
+  async fetch_RTBHouse_Data(
+    @Res() res,
+    @Headers('authorization') authHeader: string,
+    @Body() body: FetchRTBHouseDataDto,
+  ) {
     try {
-      const { dayFrom, dayTo, baseUrl, advertiserId, username, password } =
-        body;
+      const { dayFrom, dayTo, advertiserId } = body;
 
       // Validate required fields
-      if (
-        !dayFrom ||
-        !dayTo ||
-        !baseUrl ||
-        !advertiserId ||
-        !username ||
-        !password
-      ) {
+      if (!dayFrom || !dayTo) {
         throw new HttpException(
-          'Missing required fields: dayFrom, dayTo, baseUrl, advertiserId, username, password',
+          'Missing required fields: dayFrom, dayTo',
           HttpStatus.BAD_REQUEST,
         );
       }
 
+      if (!authHeader) {
+        throw new HttpException(
+          'Missing Authorization header with username:password in Basic auth format',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      // Extract credentials from "Basic <base64(username:password)>" format
+      if (!authHeader.startsWith('Basic ')) {
+        throw new HttpException(
+          'Authorization header must use Basic auth format',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const base64Credentials = authHeader.slice(6);
+      const credentials = Buffer.from(base64Credentials, 'base64').toString(
+        'utf-8',
+      );
+      const [username, password] = credentials.split(':');
+
+      if (!username || !password) {
+        throw new HttpException(
+          'Invalid Basic auth credentials format',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
       await this.jobsService.fetchAndSaveRTBHouseData(dayFrom, dayTo, {
-        baseUrl,
-        advertiserId,
+        baseUrl: 'https://api.rtbhouse.com',
+        advertiserId: advertiserId || '',
         username,
         password,
       });

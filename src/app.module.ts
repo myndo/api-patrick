@@ -8,6 +8,7 @@ import { ShopifyModule } from './modules/shopify/shopify.module';
 import { GoogleSearchConsoleModule } from './modules/google-search-console/google-search-console.module';
 import { OAuthModule } from './modules/oauth/oauth.module';
 import { ZemantaModule } from './modules/zemanta/zemanta.module';
+import { TradeDoublerModule } from './modules/tradedoubler/tradedoubler.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ZemantaModule } from './modules/zemanta/zemanta.module';
     GoogleSearchConsoleModule,
     OAuthModule,
     ZemantaModule,
+    TradeDoublerModule,
   ],
 })
 export class AppModule {}

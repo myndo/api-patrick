@@ -11,10 +11,6 @@ export class FetchShopifyProductsDto {
   @IsString()
   shop: string;
 
-  @IsNotEmpty()
-  @IsString()
-  accessToken: string;
-
   @IsOptional()
   @IsNumber()
   limit?: number;
@@ -24,10 +20,6 @@ export class FetchShopifyOrdersDto {
   @IsNotEmpty()
   @IsString()
   shop: string;
-
-  @IsNotEmpty()
-  @IsString()
-  accessToken: string;
 
   @IsOptional()
   @IsEnum(['open', 'closed', 'cancelled', 'any'])
@@ -43,10 +35,6 @@ export class FetchShopifyCustomersDto {
   @IsString()
   shop: string;
 
-  @IsNotEmpty()
-  @IsString()
-  accessToken: string;
-
   @IsOptional()
   @IsNumber()
   limit?: number;
@@ -56,10 +44,6 @@ export class FetchShopifyProductByIdDto {
   @IsNotEmpty()
   @IsString()
   shop: string;
-
-  @IsNotEmpty()
-  @IsString()
-  accessToken: string;
 
   @IsNotEmpty()
   @IsNumber()
@@ -72,10 +56,6 @@ export class FetchShopifyOrderByIdDto {
   shop: string;
 
   @IsNotEmpty()
-  @IsString()
-  accessToken: string;
-
-  @IsNotEmpty()
   @IsNumber()
   orderId: number;
 }
@@ -84,20 +64,12 @@ export class FetchShopifyShopInfoDto {
   @IsNotEmpty()
   @IsString()
   shop: string;
-
-  @IsNotEmpty()
-  @IsString()
-  accessToken: string;
 }
 
 export class SearchShopifyProductsDto {
   @IsNotEmpty()
   @IsString()
   shop: string;
-
-  @IsNotEmpty()
-  @IsString()
-  accessToken: string;
 
   @IsNotEmpty()
   @IsString()
@@ -112,10 +84,6 @@ export class GetShopifyCountDto {
   @IsNotEmpty()
   @IsString()
   shop: string;
-
-  @IsNotEmpty()
-  @IsString()
-  accessToken: string;
 
   @IsOptional()
   @IsEnum(['open', 'closed', 'cancelled', 'any'])
