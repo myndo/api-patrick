@@ -3,8 +3,9 @@ import axios from 'axios';
 export interface RTBHouseConfig {
   baseUrl: string;
   advertiserId: string;
-  username: string;
-  password: string;
+  username?: string;
+  password?: string;
+  refreshToken?: string;
 }
 
 export interface RTBHouseMetricData {
@@ -51,15 +52,41 @@ export interface RTBHouseAdvertiser {
 
 export class RTBHouseServiceAdapter {
   private config: RTBHouseConfig;
+  private accessToken: string | null = null;
 
   constructor(config: RTBHouseConfig) {
     this.config = config;
+    if (config.refreshToken) {
+      this.accessToken = config.refreshToken;
+    }
   }
 
   private getAuthHeader(): string {
+    if (this.accessToken) {
+      return `Bearer ${this.accessToken}`;
+    }
+
+    if (!this.config.username || !this.config.password) {
+      throw new Error('No authentication available');
+    }
+
     const credentials = `${this.config.username}:${this.config.password}`;
     const encoded = Buffer.from(credentials).toString('base64');
     return `Basic ${encoded}`;
+  }
+
+  private async getAuthHeaderAsync(): Promise<string> {
+    if (this.config.refreshToken) {
+      return `Bearer ${this.config.refreshToken}`;
+    }
+
+    if (this.config.username && this.config.password) {
+      return this.getAuthHeader();
+    }
+
+    throw new Error(
+      'No authentication available. Provide refreshToken or username/password',
+    );
   }
 
   async fetchCampaigns(): Promise<RTBHouseCampaign[]> {
@@ -67,7 +94,7 @@ export class RTBHouseServiceAdapter {
 
     const response = await axios.get(url, {
       headers: {
-        Authorization: this.getAuthHeader(),
+        Authorization: await this.getAuthHeaderAsync(),
         'Content-Type': 'application/json',
       },
     });
@@ -80,7 +107,7 @@ export class RTBHouseServiceAdapter {
 
     const response = await axios.get(url, {
       headers: {
-        Authorization: this.getAuthHeader(),
+        Authorization: await this.getAuthHeaderAsync(),
         'Content-Type': 'application/json',
       },
     });
@@ -107,7 +134,7 @@ export class RTBHouseServiceAdapter {
 
     const response = await axios.get(url, {
       headers: {
-        Authorization: this.getAuthHeader(),
+        Authorization: await this.getAuthHeaderAsync(),
         'Content-Type': 'application/json',
       },
     });

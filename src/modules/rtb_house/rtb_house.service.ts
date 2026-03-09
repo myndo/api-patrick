@@ -68,8 +68,9 @@ export class JobsService {
     config: {
       baseUrl: string;
       advertiserId: string;
-      username: string;
-      password: string;
+      username?: string;
+      password?: string;
+      refreshToken?: string;
     },
   ) {
     const rtbHouseService = new RTBHouseServiceAdapter(config);

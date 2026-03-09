@@ -190,24 +190,28 @@ model ZemantaCampaignBudget {
 }
 
 model TradeDoublerReport {
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  deletedAt       DateTime?
-  id              String    @id @default(uuid())
-  date            DateTime
-  campaignId      Int
-  campaignName    String
-  status          String?
-  clicks          Int       @default(0)
-  impressions     Int       @default(0)
-  conversions     Int       @default(0)
-  conversionValue Float     @default(0)
-  cost            Float     @default(0)
-  country         String?
-  currency        String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+  id                  String    @id @default(uuid())
+  date                DateTime
+  organizationName    String
+  organizationId      String
+  programName         String
+  programId           String
+  currency            String
+  country             String?
+  publisherCommission Float     @default(0)
+  orderValue          Float     @default(0)
+  totalCommission     Float     @default(0)
+  vatAmount           Float     @default(0)
+  impressions         Int       @default(0)
+  clicks              Int       @default(0)
+  currencyCode        String
 
-  @@unique([date, campaignId, country])
+  @@unique([date, organizationId, programId, country])
   @@index([date])
-  @@index([campaignId])
+  @@index([organizationId])
+  @@index([programId])
   @@index([country])
 }

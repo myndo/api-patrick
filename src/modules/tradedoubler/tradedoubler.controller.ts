@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  Headers,
   HttpException,
   HttpStatus,
   Post,
@@ -36,7 +35,6 @@ export class TradeDoublerController {
   @Post(`/jobs/create`)
   async fetch_TradeDoubler_Data(
     @Res() res,
-    @Headers('authorization') authHeader: string,
     @Body() body: FetchTradeDoublerDataDto,
   ) {
     try {
@@ -50,31 +48,9 @@ export class TradeDoublerController {
         );
       }
 
-      if (!authHeader) {
-        throw new HttpException(
-          'Missing Authorization header with API token',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-
-      // Extract token from "Bearer <token>" format
-      const apiToken = authHeader.startsWith('Bearer ')
-        ? authHeader.slice(7)
-        : authHeader;
-
-      if (!apiToken) {
-        throw new HttpException(
-          'Invalid Authorization header format',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-
       const result = await this.jobsService.fetchAndSaveTradeDoublerData(
         dateFrom,
         dateTo,
-        {
-          apiToken,
-        },
       );
 
       return reply({

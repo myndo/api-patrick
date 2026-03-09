@@ -13,6 +13,14 @@ import {
 export class TradeDoublerJobsService {
   constructor(private readonly client: DatabaseService) {}
 
+  private getRequiredEnv(name: string): string {
+    const value = process.env[name];
+    if (!value) {
+      throw new Error(`Missing required environment variable: ${name}`);
+    }
+    return value;
+  }
+
   async findAll() {
     const reports = await this.client.tradeDoublerReport.findMany({
       where: { deletedAt: null },
@@ -56,16 +64,17 @@ export class TradeDoublerJobsService {
   }
 
   /** Fetch and save TradeDoubler data */
-  async fetchAndSaveTradeDoublerData(
-    dateFrom: string,
-    dateTo: string,
-    config: {
-      apiToken: string;
-    },
-  ) {
+  async fetchAndSaveTradeDoublerData(dateFrom: string, dateTo: string) {
     const tradeDoublerService = new TradeDoublerServiceAdapter({
-      ...config,
-      baseUrl: 'https://api.tradedoubler.com/v2',
+      secret: this.getRequiredEnv('TRADEDOUBLER_SECRET'),
+      clientId: this.getRequiredEnv('TRADEDOUBLER_CLIENT_ID'),
+      username: this.getRequiredEnv('TRADEDOUBLER_USERNAME'),
+      password: this.getRequiredEnv('TRADEDOUBLER_PASSWORD'),
+      organizationId:
+        process.env.TRADEDOUBLER_ORGANIZATION_ID ||
+        this.getRequiredEnv('TRADEDOUBLER_CLIENT_ID'),
+      baseUrl:
+        process.env.TRADEDOUBLER_BASE_URL || 'https://connect.tradedoubler.com',
     });
 
     // Fetch merged data from TradeDoubler
@@ -78,23 +87,27 @@ export class TradeDoublerJobsService {
     for (const data of mergedData) {
       const reportData: CreateTradeDoublerOptions = {
         date: new Date(data.date),
-        campaignId: data.campaignId,
-        campaignName: data.campaignName,
-        status: data.status,
-        clicks: data.clicks,
-        impressions: data.impressions,
-        conversions: data.conversions,
-        conversionValue: data.conversionValue,
-        country: data.country,
+        organizationName: data.organizationName,
+        organizationId: data.organizationId,
+        programName: data.programName,
+        programId: data.programId,
         currency: data.currency,
-        cost: data.cost,
+        country: data.country,
+        publisherCommission: data.publisherCommission,
+        orderValue: data.orderValue,
+        totalCommission: data.totalCommission,
+        vatAmount: data.vatAmount,
+        impressions: data.impressions,
+        clicks: data.clicks,
+        currencyCode: data.currencyCode,
       };
 
       // Check if this data point already exists
       const existing = await this.client.tradeDoublerReport.findFirst({
         where: {
           date: reportData.date,
-          campaignId: reportData.campaignId,
+          organizationId: reportData.organizationId,
+          programId: reportData.programId,
           country: reportData.country,
         },
       });
