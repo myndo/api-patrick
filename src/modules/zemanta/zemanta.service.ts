@@ -3,12 +3,13 @@ import {
   ZemantaAdapter,
   ZemantaAccount,
 } from '../integrations/zemanta-adapter';
+import { DatabaseService } from '../../app/database/database.service';
 
 @Injectable()
 export class ZemantaService {
   private zemantaAdapter: ZemantaAdapter;
 
-  constructor() {
+  constructor(private readonly databaseService: DatabaseService) {
     this.zemantaAdapter = new ZemantaAdapter({
       clientId: process.env.ZEMANTA_CLIENT_ID || '',
       clientSecret: process.env.ZEMANTA_CLIENT_SECRET || '',
@@ -222,6 +223,53 @@ export class ZemantaService {
     } catch (error) {
       throw new HttpException(
         `Failed to get campaign details: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get all campaigns from database with optional date filtering
+   */
+  async getAllCampaignsFromDatabase(statsFrom?: string, statsTo?: string) {
+    try {
+      const where: any = {};
+
+      // Add date filters if provided
+      if (statsFrom || statsTo) {
+        where.AND = [];
+
+        if (statsFrom) {
+          where.AND.push({
+            statsFrom: {
+              gte: new Date(statsFrom),
+            },
+          });
+        }
+
+        if (statsTo) {
+          where.AND.push({
+            statsTo: {
+              lte: new Date(statsTo),
+            },
+          });
+        }
+      }
+
+      const campaigns = await this.databaseService.zemantaCampaign.findMany({
+        where,
+        include: {
+          budgets: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      return { campaigns };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get campaigns from database: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

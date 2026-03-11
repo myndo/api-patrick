@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpStatus,
   Post,
   Query,
@@ -52,12 +53,146 @@ export class GoogleSearchConsoleController {
   async oauth_Callback(@Res() res, @Query('code') code: string) {
     const tokens = await this.googleSearchConsoleService.getTokens(code);
 
+    if (tokens?.access_token) {
+      res.setHeader('Authorization', `Bearer ${tokens.access_token}`);
+    }
+
     return reply({
       res,
       results: {
         token: tokens,
         status: HttpStatus.OK,
         message: `Tokens fetched successfully`,
+      },
+    });
+  }
+
+  /**
+   * Get performance by country
+   */
+  @Post('/performance-by-country')
+  async get_Performance_By_Country(
+    @Res() res,
+    @Headers('authorization') authHeader: string,
+    @Body() body: PerformanceByCountryDto,
+  ) {
+    const { siteUrl, startDate, endDate } = body;
+
+    const accessToken = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7)
+      : null;
+
+    if (!accessToken) {
+      return reply({
+        res,
+        results: {
+          status: HttpStatus.UNAUTHORIZED,
+          message:
+            'Missing or invalid Authorization header. Use Bearer <accessToken> format',
+        },
+      });
+    }
+    const result =
+      await this.googleSearchConsoleService.getAndSavePerformanceByCountry(
+        accessToken,
+        siteUrl,
+        startDate,
+        endDate,
+      );
+    return reply({
+      res,
+      results: {
+        data: result,
+        status: HttpStatus.OK,
+        message: `Data fetched and saved successfully`,
+      },
+    });
+  }
+
+  /**
+   * Retrieve performance by country data from database
+   */
+  @Get('/performance-by-country/find-all')
+  async find_All_Performance_By_Country(
+    @Res() res,
+    @Headers('authorization') authHeader: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const accessToken = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7)
+      : null;
+
+    if (!accessToken) {
+      return reply({
+        res,
+        results: {
+          status: HttpStatus.UNAUTHORIZED,
+          message:
+            'Missing or invalid Authorization header. Use Bearer <accessToken> format',
+        },
+      });
+    }
+
+    const data =
+      await this.googleSearchConsoleService.findAllPerformanceByCountry(
+        startDate,
+        endDate,
+      );
+
+    return reply({
+      res,
+      results: {
+        ...data,
+        status: HttpStatus.OK,
+        message: `Performance by country data fetched successfully`,
+      },
+    });
+  }
+
+  /**
+   * Get search analytics data
+   */
+  @Post('/analytics') // non toccare per il momento
+  async get_Search_Analytics(
+    @Res() res,
+    @Headers('authorization') authHeader: string,
+    @Body() body: SearchAnalyticsDto,
+  ) {
+    const { siteUrl, startDate, endDate, dimensions, rowLimit, startRow } =
+      body;
+
+    const accessToken = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7)
+      : null;
+
+    if (!accessToken) {
+      return reply({
+        res,
+        results: {
+          status: HttpStatus.UNAUTHORIZED,
+          message:
+            'Missing or invalid Authorization header. Use Bearer <accessToken> format',
+        },
+      });
+    }
+
+    const result = await this.googleSearchConsoleService.getSearchAnalytics(
+      accessToken,
+      siteUrl,
+      startDate,
+      endDate,
+      dimensions,
+      rowLimit,
+      startRow,
+    );
+
+    return reply({
+      res,
+      results: {
+        data: result,
+        status: HttpStatus.OK,
+        message: `Data fetched and saved successfully`,
       },
     });
   }
@@ -76,40 +211,6 @@ export class GoogleSearchConsoleController {
         sites: result,
         status: HttpStatus.OK,
         message: `Sites fetched successfully`,
-      },
-    });
-  }
-
-  /**
-   * Get search analytics data
-   */
-  @Post('/analytics')
-  async get_Search_Analytics(@Res() res, @Body() body: SearchAnalyticsDto) {
-    const {
-      accessToken,
-      siteUrl,
-      startDate,
-      endDate,
-      dimensions,
-      rowLimit,
-      startRow,
-    } = body;
-    const result = await this.googleSearchConsoleService.getSearchAnalytics(
-      accessToken,
-      siteUrl,
-      startDate,
-      endDate,
-      dimensions,
-      rowLimit,
-      startRow,
-    );
-
-    return reply({
-      res,
-      results: {
-        data: result,
-        status: HttpStatus.OK,
-        message: `Data fetched successfully`,
       },
     });
   }
@@ -162,35 +263,6 @@ export class GoogleSearchConsoleController {
     });
   }
 
-  /**
-   * Get performance by country
-   */
-  @Post('/performance-by-country')
-  async get_Performance_By_Country(
-    @Res() res,
-    @Body() body: PerformanceByCountryDto,
-  ) {
-    const { accessToken, siteUrl, startDate, endDate } = body;
-    const result =
-      await this.googleSearchConsoleService.getAndSavePerformanceByCountry(
-        accessToken,
-        siteUrl,
-        startDate,
-        endDate,
-      );
-    return reply({
-      res,
-      results: {
-        data: result,
-        status: HttpStatus.OK,
-        message: `Data fetched and saved successfully`,
-      },
-    });
-  }
-
-  /**
-   * Get performance by device
-   */
   @Post('/performance-by-device')
   async get_Performance_By_Device(
     @Res() res,

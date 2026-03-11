@@ -261,6 +261,48 @@ export class GoogleSearchConsoleService {
   }
 
   /**
+   * Retrieve saved performance by country from database
+   */
+  async findAllPerformanceByCountry(startDate?: string, endDate?: string) {
+    try {
+      const where: any = {};
+
+      if (startDate || endDate) {
+        where.AND = [];
+
+        if (startDate) {
+          where.AND.push({
+            startDate: {
+              gte: new Date(startDate),
+            },
+          });
+        }
+
+        if (endDate) {
+          where.AND.push({
+            endDate: {
+              lte: new Date(endDate),
+            },
+          });
+        }
+      }
+
+      const countries =
+        await this.databaseService.performanceByCountry.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+        });
+
+      return { total: countries.length, data: countries };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to retrieve performance by country data: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
    * Get and save performance by country to database
    */
   async getAndSavePerformanceByCountry(

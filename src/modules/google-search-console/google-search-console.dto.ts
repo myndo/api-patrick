@@ -91,10 +91,6 @@ export class PerformanceByCountryDto {
 
   @IsNotEmpty()
   @IsString()
-  accessToken: string;
-
-  @IsNotEmpty()
-  @IsString()
   startDate: string;
 
   @IsNotEmpty()

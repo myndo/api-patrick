@@ -23,6 +23,30 @@ export class ZemantaController {
   constructor(private readonly zemantaService: ZemantaService) {}
 
   /**
+   * Get all campaigns from database
+   * GET /api/v1/zemanta/find-all
+   * Query params (optional): statsFrom (YYYY-MM-DD), statsTo (YYYY-MM-DD)
+   */
+  @Get('find-all')
+  async find_All(
+    @Query('statsFrom') statsFrom?: string,
+    @Query('statsTo') statsTo?: string,
+    @Res() res?,
+  ) {
+    const data = await this.zemantaService.getAllCampaignsFromDatabase(
+      statsFrom,
+      statsTo,
+    );
+    return reply({
+      res,
+      results: {
+        ...data,
+        message: 'Campaigns retrieved successfully from database',
+      },
+    });
+  }
+
+  /**
    * List all accounts
    * GET /api/v1/zemanta/accounts
    */
