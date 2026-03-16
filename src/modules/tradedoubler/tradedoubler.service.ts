@@ -89,7 +89,7 @@ export class TradeDoublerJobsService {
         date: new Date(data.date),
         organizationName: data.organizationName,
         organizationId: data.organizationId,
-        programName: data.programName,
+        programName: data.campaignName,
         programId: data.programId,
         currency: data.currency,
         country: data.country,

@@ -13,7 +13,7 @@ export interface TradeDoublerReportData {
   date: string;
   organizationName: string;
   organizationId: string;
-  programName: string;
+  campaignName: string;
   programId: string;
   currency: string;
   country: string;
@@ -28,6 +28,10 @@ export interface TradeDoublerReportData {
 
 interface AggregatedMetrics {
   [key: string]: Partial<TradeDoublerReportData>;
+}
+
+interface TradeDoublerProgramInfo {
+  countryCode?: string;
 }
 
 export class TradeDoublerServiceAdapter {
@@ -85,25 +89,6 @@ export class TradeDoublerServiceAdapter {
     };
   }
 
-  private mapReportRow(row: Record<string, any>): TradeDoublerReportData {
-    return {
-      date: row.date || new Date().toISOString(),
-      organizationName: row.programName || '',
-      organizationId: String(row.programId || this.config.organizationId || ''),
-      programName: row.programName || '',
-      programId: String(row.programId || ''),
-      currency: row.reportCurrencyCode || 'EUR',
-      country: row.country || 'GLOBAL',
-      publisherCommission: Number(row.amount || 0),
-      orderValue: Number(row.amount || 0),
-      totalCommission: Number(row.amount || 0),
-      vatAmount: Number(row.vatAmount || 0),
-      impressions: 0,
-      clicks: 0,
-      currencyCode: row.reportCurrencyCode || 'EUR',
-    };
-  }
-
   async fetchProgramPerformance(
     dateFrom: string,
     dateTo: string,
@@ -117,6 +102,7 @@ export class TradeDoublerServiceAdapter {
     }
 
     const metrics: AggregatedMetrics = {};
+    const programInfo = await this.fetchPrograms();
 
     try {
       // Fetch from multiple endpoints and aggregate data
@@ -125,8 +111,20 @@ export class TradeDoublerServiceAdapter {
           formattedFromDate,
           formattedToDate,
           metrics,
+          programInfo,
         ),
-        this.fetchTransactions(formattedFromDate, formattedToDate, metrics),
+        this.fetchTransactions(
+          formattedFromDate,
+          formattedToDate,
+          metrics,
+          programInfo,
+        ),
+        this.fetchStatistics(
+          formattedFromDate,
+          formattedToDate,
+          metrics,
+          programInfo,
+        ),
       ]);
 
       // Convert aggregated metrics to final report data
@@ -136,7 +134,7 @@ export class TradeDoublerServiceAdapter {
           organizationName: metric.organizationName || '',
           organizationId:
             metric.organizationId || String(this.config.organizationId),
-          programName: metric.programName || '',
+          campaignName: metric.campaignName || '',
           programId: metric.programId || '',
           currency: metric.currency || 'EUR',
           country: metric.country || 'GLOBAL',
@@ -165,10 +163,59 @@ export class TradeDoublerServiceAdapter {
     return `${date}_${organizationId}_${programId}_${country}`;
   }
 
+  private getProgramCountry(
+    programId: string | number,
+    programInfo: Record<string, TradeDoublerProgramInfo>,
+    fallback?: string,
+  ): string {
+    return programInfo[String(programId)]?.countryCode || fallback || 'GLOBAL';
+  }
+
+  private async fetchPrograms(): Promise<
+    Record<string, TradeDoublerProgramInfo>
+  > {
+    try {
+      const response = await axios.get(`${this.baseUrl}/advertiser/programs`, {
+        headers: await this.getAuthHeader(),
+      });
+
+      const items =
+        response.data?.items || response.data?.programs || response.data || [];
+
+      if (!Array.isArray(items)) {
+        return {};
+      }
+
+      return items.reduce(
+        (acc, item) => {
+          if (item?.id !== undefined && item?.id !== null) {
+            acc[String(item.id)] = {
+              countryCode: item.countryCode || item.country || undefined,
+            };
+          }
+
+          return acc;
+        },
+        {} as Record<string, TradeDoublerProgramInfo>,
+      );
+    } catch (error) {
+      if (error.response) {
+        console.warn(
+          `Failed to fetch programs: ${error.response.status} - ${JSON.stringify(error.response.data)}`,
+        );
+      } else {
+        console.warn('Failed to fetch programs:', error.message);
+      }
+
+      return {};
+    }
+  }
+
   private async fetchPrepaymentBalance(
     fromDate: string,
     toDate: string,
     metrics: AggregatedMetrics,
+    programInfo: Record<string, TradeDoublerProgramInfo>,
   ): Promise<void> {
     try {
       const response = await axios.get(
@@ -191,17 +238,19 @@ export class TradeDoublerServiceAdapter {
       if (!Array.isArray(items)) return;
 
       items.forEach((row) => {
+        const country = this.getProgramCountry(row.programId, programInfo);
         const key = this.createMetricKey(
           row.date,
           row.programId,
           row.programId,
-          'GLOBAL',
+          country,
         );
 
         metrics[key] = metrics[key] || {};
         metrics[key].date = row.date;
         metrics[key].programId = String(row.programId);
-        metrics[key].programName = row.programName;
+        metrics[key].campaignName = row.programName;
+        metrics[key].country = country;
         metrics[key].currency = row.reportCurrencyCode || 'EUR';
         metrics[key].currencyCode = row.reportCurrencyCode || 'EUR';
         metrics[key].totalCommission =
@@ -222,6 +271,7 @@ export class TradeDoublerServiceAdapter {
     fromDate: string,
     toDate: string,
     metrics: AggregatedMetrics,
+    programInfo: Record<string, TradeDoublerProgramInfo>,
   ): Promise<void> {
     try {
       const response = await axios.get(
@@ -242,18 +292,23 @@ export class TradeDoublerServiceAdapter {
       if (!Array.isArray(items)) return;
 
       items.forEach((row) => {
+        const country = this.getProgramCountry(
+          row.programId,
+          programInfo,
+          row.country,
+        );
         const key = this.createMetricKey(
           row.date,
           row.programId,
           row.programId,
-          row.country || 'GLOBAL',
+          country,
         );
 
         metrics[key] = metrics[key] || {};
         metrics[key].date = row.date;
         metrics[key].programId = String(row.programId);
-        metrics[key].programName = row.programName;
-        metrics[key].country = row.country || 'GLOBAL';
+        metrics[key].campaignName = row.programName;
+        metrics[key].country = country;
         metrics[key].orderValue =
           (metrics[key].orderValue || 0) + (Number(row.orderValue) || 0);
         metrics[key].vatAmount =
@@ -270,21 +325,23 @@ export class TradeDoublerServiceAdapter {
     }
   }
 
-  private async fetchClicks(
+  private async fetchStatistics(
     fromDate: string,
     toDate: string,
     metrics: AggregatedMetrics,
+    programInfo: Record<string, TradeDoublerProgramInfo>,
   ): Promise<void> {
     try {
       const response = await axios.get(
-        `${this.baseUrl}/advertiser/report/clicks`,
+        `${this.baseUrl}/advertiser/report/statistics`,
         {
           headers: await this.getAuthHeader(),
           params: {
             fromDate,
             toDate,
-            limit: 100,
-            offset: 0,
+            reportCurrencyCode: 'EUR',
+            intervalType: 'day',
+            reportType: 'program',
           },
         },
       );
@@ -293,28 +350,36 @@ export class TradeDoublerServiceAdapter {
       if (!Array.isArray(items)) return;
 
       items.forEach((row) => {
+        const country = this.getProgramCountry(
+          row.programId,
+          programInfo,
+          row.country,
+        );
         const key = this.createMetricKey(
           row.date,
           row.programId,
           row.programId,
-          row.country || 'GLOBAL',
+          country,
         );
 
         metrics[key] = metrics[key] || {};
         metrics[key].date = row.date;
         metrics[key].programId = String(row.programId);
-        metrics[key].programName = row.programName;
-        metrics[key].country = row.country || 'GLOBAL';
+        metrics[key].campaignName =
+          row.programName || metrics[key].campaignName;
+        metrics[key].country = country;
+        metrics[key].impressions =
+          (metrics[key].impressions || 0) + (Number(row.impressions) || 0);
         metrics[key].clicks =
           (metrics[key].clicks || 0) + (Number(row.clicks) || 0);
       });
     } catch (error) {
       if (error.response) {
         console.warn(
-          `Failed to fetch clicks: ${error.response.status} - ${JSON.stringify(error.response.data)}`,
+          `Failed to fetch statistics: ${error.response.status} - ${JSON.stringify(error.response.data)}`,
         );
       } else {
-        console.warn('Failed to fetch clicks:', error.message);
+        console.warn('Failed to fetch statistics:', error.message);
       }
     }
   }
