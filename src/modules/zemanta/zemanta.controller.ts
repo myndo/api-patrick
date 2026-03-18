@@ -1,9 +1,9 @@
 import {
+  Body,
   Controller,
   Get,
+  Headers,
   Post,
-  Put,
-  Body,
   Param,
   Query,
   ValidationPipe,
@@ -11,9 +11,8 @@ import {
 } from '@nestjs/common';
 import { ZemantaService } from './zemanta.service';
 import {
+  GenerateAccessTokenDto,
   ListAccountsDto,
-  UpdateAccountDto,
-  CreateAccountDto,
   ListCampaignsDto,
 } from './zemanta.dto';
 import { reply } from '../../app/utils/reply';
@@ -21,6 +20,25 @@ import { reply } from '../../app/utils/reply';
 @Controller('zemanta')
 export class ZemantaController {
   constructor(private readonly zemantaService: ZemantaService) {}
+
+  /**
+   * Generate access token to pass as Authorization header
+   * POST /api/v1/zemanta/access-token
+   */
+  @Post('access-token')
+  async generate_AccessToken(
+    @Body(new ValidationPipe({ transform: true })) body: GenerateAccessTokenDto,
+    @Res() res,
+  ) {
+    const data = await this.zemantaService.generateAccessToken(body);
+    return reply({
+      res,
+      results: {
+        ...data,
+        message: 'Access token generated successfully',
+      },
+    });
+  }
 
   /**
    * Get all campaigns from database
@@ -53,11 +71,13 @@ export class ZemantaController {
   @Get('accounts')
   async list_Accounts(
     @Query(new ValidationPipe({ transform: true })) query: ListAccountsDto,
+    @Headers('authorization') authorization: string,
     @Res() res,
   ) {
     const data = await this.zemantaService.listAccounts(
       query.includeArchived,
       query.includeDeliveryStatus,
+      authorization,
     );
     return reply({
       res,
@@ -76,11 +96,13 @@ export class ZemantaController {
   async get_AccountDetails(
     @Param('accountId') accountId: string,
     @Query('includeDeliveryStatus') includeDeliveryStatus: boolean,
+    @Headers('authorization') authorization: string,
     @Res() res,
   ) {
     const data = await this.zemantaService.getAccountDetails(
       accountId,
       includeDeliveryStatus,
+      authorization,
     );
     return reply({
       res,
@@ -92,103 +114,16 @@ export class ZemantaController {
   }
 
   /**
-   * Update account
-   * PUT /api/v1/zemanta/accounts/:accountId
-   */
-  @Put('accounts/:accountId')
-  async update_Account(
-    @Param('accountId') accountId: string,
-    @Body(new ValidationPipe()) updateDto: UpdateAccountDto,
-    @Res() res,
-  ) {
-    const data = await this.zemantaService.updateAccount(accountId, updateDto);
-    return reply({
-      res,
-      results: data,
-    });
-  }
-
-  /**
-   * Create new account
-   * POST /api/v1/zemanta/accounts
-   */
-  @Post('accounts')
-  async create_Account(
-    @Body(new ValidationPipe()) createDto: CreateAccountDto,
-    @Res() res,
-  ) {
-    const data = await this.zemantaService.createAccount(createDto);
-    return reply({
-      res,
-      results: data,
-    });
-  }
-
-  /**
-   * Get account sources
-   * GET /api/v1/zemanta/accounts/:accountId/sources
-   */
-  @Get('accounts/:accountId/sources')
-  async get_AccountSources(@Param('accountId') accountId: string, @Res() res) {
-    const data = await this.zemantaService.getAccountSources(accountId);
-    return reply({
-      res,
-      results: {
-        ...data,
-        message: 'Account sources retrieved successfully',
-      },
-    });
-  }
-
-  /**
-   * Get account credits
-   * GET /api/v1/zemanta/accounts/:accountId/credits
-   */
-  @Get('accounts/:accountId/credits')
-  async get_AccountCredits(@Param('accountId') accountId: string, @Res() res) {
-    const data = await this.zemantaService.getAccountCredits(accountId);
-    return reply({
-      res,
-      results: {
-        ...data,
-        message: 'Account credits retrieved successfully',
-      },
-    });
-  }
-
-  /**
-   * Get account credit details
-   * GET /api/v1/zemanta/accounts/:accountId/credits/:creditId
-   */
-  @Get('accounts/:accountId/credits/:creditId')
-  async get_AccountCreditDetails(
-    @Param('accountId') accountId: string,
-    @Param('creditId') creditId: string,
-    @Res() res,
-  ) {
-    const data = await this.zemantaService.getAccountCreditDetails(
-      accountId,
-      creditId,
-    );
-    return reply({
-      res,
-      results: {
-        ...data,
-        message: 'Credit details retrieved successfully',
-      },
-    });
-  }
-
-  /**
    * List campaigns
    * GET /api/v1/zemanta/campaigns
    */
   @Get('campaigns')
   async list_Campaigns(
     @Query(new ValidationPipe({ transform: true })) query: ListCampaignsDto,
+    @Headers('authorization') authorization: string,
     @Res() res,
   ) {
-    const data = await this.zemantaService.listCampaigns(query);
+    const data = await this.zemantaService.listCampaigns(query, authorization);
     return reply({
       res,
       results: {
@@ -208,12 +143,14 @@ export class ZemantaController {
     @Param('campaignId') campaignId: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Headers('authorization') authorization?: string,
     @Res() res?,
   ) {
     const result = await this.zemantaService.getCampaignDetails(
       campaignId,
       from,
       to,
+      authorization,
     );
     return reply({
       res,
@@ -233,6 +170,7 @@ export class ZemantaController {
   async sync_Campaigns(
     @Query('from') from: string,
     @Query('to') to: string,
+    @Headers('authorization') authorization: string,
     @Res() res,
   ) {
     if (!from || !to) {
@@ -245,7 +183,11 @@ export class ZemantaController {
       });
     }
 
-    const data = await this.zemantaService.syncCampaignsToDatabase(from, to);
+    const data = await this.zemantaService.syncCampaignsToDatabase(
+      from,
+      to,
+      authorization,
+    );
     return reply({
       res,
       results: data,

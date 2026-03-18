@@ -1,9 +1,7 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import {
-  ZemantaAdapter,
-  ZemantaAccount,
-} from '../integrations/zemanta-adapter';
+import { ZemantaAdapter } from '../integrations/zemanta-adapter';
 import { DatabaseService } from '../../app/database/database.service';
+import { GenerateAccessTokenDto } from './zemanta.dto';
 
 @Injectable()
 export class ZemantaService {
@@ -16,18 +14,55 @@ export class ZemantaService {
     });
   }
 
+  private extractAccessToken(authorization?: string): string | undefined {
+    if (!authorization) {
+      return undefined;
+    }
+
+    return authorization.replace(/^Bearer\s+/i, '').trim();
+  }
+
+  /**
+   * Generate access token from provided credentials
+   */
+  async generateAccessToken(body: GenerateAccessTokenDto) {
+    try {
+      const adapter = new ZemantaAdapter({
+        clientId: body.clientId,
+        clientSecret: body.clientSecret,
+        baseUrl: body.baseUrl,
+      });
+
+      const accessToken = await adapter.getAccessToken();
+      return {
+        accessToken,
+        authorization: `Bearer ${accessToken}`,
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to generate access token: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
   /**
    * List all accounts
    */
   async listAccounts(
     includeArchived: boolean = false,
     includeDeliveryStatus: boolean = false,
+    authorization?: string,
   ) {
     try {
-      const accounts = await this.zemantaAdapter.listAccounts({
-        includeArchived,
-        includeDeliveryStatus,
-      });
+      const accessToken = this.extractAccessToken(authorization);
+      const accounts = await this.zemantaAdapter.listAccounts(
+        {
+          includeArchived,
+          includeDeliveryStatus,
+        },
+        accessToken,
+      );
       return { accounts };
     } catch (error) {
       throw new HttpException(
@@ -43,11 +78,14 @@ export class ZemantaService {
   async getAccountDetails(
     accountId: string,
     includeDeliveryStatus: boolean = false,
+    authorization?: string,
   ) {
     try {
+      const accessToken = this.extractAccessToken(authorization);
       const account = await this.zemantaAdapter.getAccountDetails(
         accountId,
         includeDeliveryStatus,
+        accessToken,
       );
       return { account };
     } catch (error) {
@@ -59,100 +97,23 @@ export class ZemantaService {
   }
 
   /**
-   * Update account
-   */
-  async updateAccount(accountId: string, updates: Partial<ZemantaAccount>) {
-    try {
-      const account = await this.zemantaAdapter.updateAccount(
-        accountId,
-        updates,
-      );
-      return { account, message: 'Account updated successfully' };
-    } catch (error) {
-      throw new HttpException(
-        `Failed to update account: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /**
-   * Create new account
-   */
-  async createAccount(accountData: Partial<ZemantaAccount>) {
-    try {
-      const account = await this.zemantaAdapter.createAccount(accountData);
-      return { account, message: 'Account created successfully' };
-    } catch (error) {
-      throw new HttpException(
-        `Failed to create account: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /**
-   * Get account sources
-   */
-  async getAccountSources(accountId: string) {
-    try {
-      const sources = await this.zemantaAdapter.getAccountSources(accountId);
-      return { sources };
-    } catch (error) {
-      throw new HttpException(
-        `Failed to get account sources: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /**
-   * Get account credits
-   */
-  async getAccountCredits(accountId: string) {
-    try {
-      const credits = await this.zemantaAdapter.getAccountCredits(accountId);
-      return { credits };
-    } catch (error) {
-      throw new HttpException(
-        `Failed to get account credits: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /**
-   * Get account credit details
-   */
-  async getAccountCreditDetails(accountId: string, creditId: string) {
-    try {
-      const credit = await this.zemantaAdapter.getAccountCreditDetails(
-        accountId,
-        creditId,
-      );
-      return { credit };
-    } catch (error) {
-      throw new HttpException(
-        `Failed to get credit details: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /**
    * List campaigns
    */
-  async listCampaigns(params: {
-    includeArchived?: boolean;
-    includeGoals?: boolean;
-    includeBudgets?: boolean;
-    includeDeliveryStatus?: boolean;
-    accountId?: string;
-    excludeInactive?: boolean;
-    from?: string;
-    to?: string;
-  }) {
+  async listCampaigns(
+    params: {
+      includeArchived?: boolean;
+      includeGoals?: boolean;
+      includeBudgets?: boolean;
+      includeDeliveryStatus?: boolean;
+      accountId?: string;
+      excludeInactive?: boolean;
+      from?: string;
+      to?: string;
+    },
+    authorization?: string,
+  ) {
     try {
+      const accessToken = this.extractAccessToken(authorization);
       // If from and to dates are provided, fetch campaigns with stats
       if (params.from && params.to) {
         const { from, to, ...campaignParams } = params;
@@ -160,12 +121,16 @@ export class ZemantaService {
           campaignParams,
           from,
           to,
+          accessToken,
         );
         return { campaigns };
       }
 
       // Otherwise, fetch campaigns without stats
-      const campaigns = await this.zemantaAdapter.listCampaigns(params);
+      const campaigns = await this.zemantaAdapter.listCampaigns(
+        params,
+        accessToken,
+      );
       return { campaigns };
     } catch (error) {
       throw new HttpException(
@@ -178,12 +143,19 @@ export class ZemantaService {
   /**
    * Get campaign statistics
    */
-  async getCampaignStats(campaignId: string, from: string, to: string) {
+  async getCampaignStats(
+    campaignId: string,
+    from: string,
+    to: string,
+    authorization?: string,
+  ) {
     try {
+      const accessToken = this.extractAccessToken(authorization);
       const stats = await this.zemantaAdapter.getCampaignStats(
         campaignId,
         from,
         to,
+        accessToken,
       );
       return { stats };
     } catch (error) {
@@ -197,9 +169,13 @@ export class ZemantaService {
   /**
    * Get campaign budgets
    */
-  async getCampaignBudgets(campaignId: string) {
+  async getCampaignBudgets(campaignId: string, authorization?: string) {
     try {
-      const budgets = await this.zemantaAdapter.getCampaignBudgets(campaignId);
+      const accessToken = this.extractAccessToken(authorization);
+      const budgets = await this.zemantaAdapter.getCampaignBudgets(
+        campaignId,
+        accessToken,
+      );
       return { budgets };
     } catch (error) {
       throw new HttpException(
@@ -212,12 +188,19 @@ export class ZemantaService {
   /**
    * Get campaign details (budgets and optionally stats)
    */
-  async getCampaignDetails(campaignId: string, from?: string, to?: string) {
+  async getCampaignDetails(
+    campaignId: string,
+    from?: string,
+    to?: string,
+    authorization?: string,
+  ) {
     try {
+      const accessToken = this.extractAccessToken(authorization);
       const result = await this.zemantaAdapter.getCampaignDetails(
         campaignId,
         from,
         to,
+        accessToken,
       );
       return result;
     } catch (error) {
@@ -278,17 +261,26 @@ export class ZemantaService {
   /**
    * Sync all campaigns with budgets and stats to database
    */
-  async syncCampaignsToDatabase(from: string, to: string) {
+  async syncCampaignsToDatabase(
+    from: string,
+    to: string,
+    authorization?: string,
+  ) {
     try {
       // Import Prisma client dynamically to avoid circular dependencies
       const { DatabaseService } =
         await import('../../app/database/database.service');
       const prisma = new DatabaseService();
 
+      const accessToken = this.extractAccessToken(authorization);
+
       // Get all accounts
-      const accounts = await this.zemantaAdapter.listAccounts({
-        includeArchived: false,
-      });
+      const accounts = await this.zemantaAdapter.listAccounts(
+        {
+          includeArchived: false,
+        },
+        accessToken,
+      );
 
       let totalCampaigns = 0;
       const errors = [];
@@ -297,16 +289,19 @@ export class ZemantaService {
       for (const account of accounts) {
         try {
           // Get campaigns for this account with budgets and stats
-          const { campaigns } = await this.listCampaigns({
-            accountId: account.id,
-            includeBudgets: true,
-            includeGoals: false,
-            includeArchived: false,
-            excludeInactive: false,
-            includeDeliveryStatus: true,
-            from,
-            to,
-          });
+          const { campaigns } = await this.listCampaigns(
+            {
+              accountId: account.id,
+              includeBudgets: true,
+              includeGoals: false,
+              includeArchived: false,
+              excludeInactive: false,
+              includeDeliveryStatus: true,
+              from,
+              to,
+            },
+            accessToken ? `Bearer ${accessToken}` : undefined,
+          );
 
           // Store each campaign
           for (const campaign of campaigns) {

@@ -196,19 +196,22 @@ export class ZemantaAdapter {
   /**
    * Set access token for API calls
    */
-  private async setAuthHeader() {
-    const token = await this.getAccessToken();
+  private async setAuthHeader(accessToken?: string) {
+    const token = accessToken || (await this.getAccessToken());
     this.client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   }
 
   /**
    * List all accounts
    */
-  async listAccounts(params?: {
-    includeArchived?: boolean;
-    includeDeliveryStatus?: boolean;
-  }): Promise<ZemantaAccount[]> {
-    await this.setAuthHeader();
+  async listAccounts(
+    params?: {
+      includeArchived?: boolean;
+      includeDeliveryStatus?: boolean;
+    },
+    accessToken?: string,
+  ): Promise<ZemantaAccount[]> {
+    await this.setAuthHeader(accessToken);
 
     const response = await this.client.get<ZemantaAccountListResponse>(
       '/rest/v1/accounts/',
@@ -224,8 +227,9 @@ export class ZemantaAdapter {
   async getAccountDetails(
     accountId: string,
     includeDeliveryStatus: boolean = false,
+    accessToken?: string,
   ): Promise<ZemantaAccount> {
-    await this.setAuthHeader();
+    await this.setAuthHeader(accessToken);
 
     const response = await this.client.get<ZemantaAccountDetailsResponse>(
       `/rest/v1/accounts/${accountId}`,
@@ -238,92 +242,20 @@ export class ZemantaAdapter {
   }
 
   /**
-   * Update account details
-   */
-  async updateAccount(
-    accountId: string,
-    updates: Partial<ZemantaAccount>,
-  ): Promise<ZemantaAccount> {
-    await this.setAuthHeader();
-
-    const response = await this.client.put<ZemantaAccountDetailsResponse>(
-      `/rest/v1/accounts/${accountId}`,
-      updates,
-    );
-
-    return response.data.data;
-  }
-
-  /**
-   * Create a new account
-   */
-  async createAccount(
-    accountData: Partial<ZemantaAccount>,
-  ): Promise<ZemantaAccount> {
-    await this.setAuthHeader();
-
-    const response = await this.client.post<ZemantaAccountDetailsResponse>(
-      '/rest/v1/accounts/',
-      accountData,
-    );
-
-    return response.data.data;
-  }
-
-  /**
-   * Get account sources
-   */
-  async getAccountSources(accountId: string): Promise<ZemantaSource[]> {
-    await this.setAuthHeader();
-
-    const response = await this.client.get<ZemantaSourcesResponse>(
-      `/rest/v1/accounts/${accountId}/sources/`,
-    );
-
-    return response.data.data;
-  }
-
-  /**
-   * Get active credit items for account
-   */
-  async getAccountCredits(accountId: string): Promise<ZemantaCreditItem[]> {
-    await this.setAuthHeader();
-
-    const response = await this.client.get<ZemantaCreditListResponse>(
-      `/rest/v1/accounts/${accountId}/credits/`,
-    );
-
-    return response.data.data;
-  }
-
-  /**
-   * Get specific credit item for account
-   */
-  async getAccountCreditDetails(
-    accountId: string,
-    creditId: string,
-  ): Promise<ZemantaCreditItem> {
-    await this.setAuthHeader();
-
-    const response = await this.client.get<ZemantaCreditDetailsResponse>(
-      `/rest/v1/accounts/${accountId}/credits/${creditId}`,
-    );
-
-    return response.data.data;
-  }
-
-  /**
    * List campaigns with optional filters
    */
-  async listCampaigns(params?: {
-    includeArchived?: boolean;
-    includeGoals?: boolean;
-    includeBudgets?: boolean;
-    includeDeliveryStatus?: boolean;
-    accountId?: string;
-    excludeInactive?: boolean;
-  }): Promise<ZemantaCampaign[]> {
-    await this.setAuthHeader();
+  async listCampaigns(
+    params?: {
+      includeArchived?: boolean;
+      includeGoals?: boolean;
+      includeBudgets?: boolean;
+      includeDeliveryStatus?: boolean;
+      accountId?: string;
+      excludeInactive?: boolean;
+    },
+    accessToken?: string,
+  ): Promise<ZemantaCampaign[]> {
+    await this.setAuthHeader(accessToken);
 
     const response = await this.client.get<ZemantaCampaignListResponse>(
       '/rest/v1/campaigns/',
@@ -342,7 +274,11 @@ export class ZemantaAdapter {
     await Promise.all(
       uniqueAccountIds.map(async (accountId) => {
         try {
-          const account = await this.getAccountDetails(accountId);
+          const account = await this.getAccountDetails(
+            accountId,
+            false,
+            accessToken,
+          );
           accountsMap.set(accountId, account);
         } catch (error) {
           console.warn(
@@ -379,17 +315,23 @@ export class ZemantaAdapter {
     },
     from: string,
     to: string,
+    accessToken?: string,
   ): Promise<(ZemantaCampaign & { stats?: ZemantaCampaignStats })[]> {
-    await this.setAuthHeader();
+    await this.setAuthHeader(accessToken);
 
     // Fetch all campaigns
-    const campaigns = await this.listCampaigns(params);
+    const campaigns = await this.listCampaigns(params, accessToken);
 
     // Fetch stats for each campaign in parallel
     const campaignsWithStats = await Promise.all(
       campaigns.map(async (campaign) => {
         try {
-          const stats = await this.getCampaignStats(campaign.id, from, to);
+          const stats = await this.getCampaignStats(
+            campaign.id,
+            from,
+            to,
+            accessToken,
+          );
           return { ...campaign, stats };
         } catch (error) {
           // If stats fetch fails for a campaign, return campaign without stats
@@ -412,8 +354,9 @@ export class ZemantaAdapter {
     campaignId: string,
     from: string,
     to: string,
+    accessToken?: string,
   ): Promise<ZemantaCampaignStats> {
-    await this.setAuthHeader();
+    await this.setAuthHeader(accessToken);
 
     const response = await this.client.get<ZemantaCampaignStatsResponse>(
       `/rest/v1/campaigns/${campaignId}/stats/`,
@@ -428,8 +371,11 @@ export class ZemantaAdapter {
   /**
    * Get campaign budgets
    */
-  async getCampaignBudgets(campaignId: string): Promise<ZemantaBudgetItem[]> {
-    await this.setAuthHeader();
+  async getCampaignBudgets(
+    campaignId: string,
+    accessToken?: string,
+  ): Promise<ZemantaBudgetItem[]> {
+    await this.setAuthHeader(accessToken);
 
     const response = await this.client.get<ZemantaCampaignBudgetsResponse>(
       `/rest/v1/campaigns/${campaignId}/budgets/`,
@@ -445,10 +391,11 @@ export class ZemantaAdapter {
     campaignId: string,
     from?: string,
     to?: string,
+    accessToken?: string,
   ): Promise<{
     data: { budgets: ZemantaBudgetItem[]; stats?: ZemantaCampaignStats };
   }> {
-    await this.setAuthHeader();
+    await this.setAuthHeader(accessToken);
 
     const budgetsPromise = this.client.get<ZemantaCampaignBudgetsResponse>(
       `/rest/v1/campaigns/${campaignId}/budgets/`,

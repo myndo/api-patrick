@@ -1,11 +1,20 @@
-import {
-  IsString,
-  IsOptional,
-  IsBoolean,
-  IsNumber,
-  IsObject,
-} from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNotEmpty } from 'class-validator';
 import { Transform } from 'class-transformer';
+
+export class GenerateAccessTokenDto {
+  @IsString()
+  @IsNotEmpty()
+  clientId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  clientSecret: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  baseUrl?: string;
+}
 
 export class ListAccountsDto {
   @IsOptional()
@@ -27,106 +36,6 @@ export class GetAccountDetailsDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   includeDeliveryStatus?: boolean = false;
-}
-
-export class TargetingDto {
-  @IsOptional()
-  @IsObject()
-  publisherGroups?: {
-    included?: string[];
-    excluded?: string[];
-  };
-
-  @IsOptional()
-  @IsObject()
-  keywordLists?: {
-    excluded?: string[];
-  };
-}
-
-export class UpdateAccountDto {
-  @IsString()
-  accountId: string;
-
-  @IsOptional()
-  @IsString()
-  name?: string;
-
-  @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
-  @IsBoolean()
-  archived?: boolean;
-
-  @IsOptional()
-  @IsObject()
-  targeting?: TargetingDto;
-
-  @IsOptional()
-  @IsNumber()
-  frequencyCapping?: number;
-
-  @IsOptional()
-  @IsString()
-  defaultIconUrl?: string;
-
-  @IsOptional()
-  @IsString()
-  defaultBrandName?: string;
-}
-
-export class CreateAccountDto {
-  @IsString()
-  name: string;
-
-  @IsString()
-  agencyId: string;
-
-  @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
-  @IsBoolean()
-  archived?: boolean;
-
-  @IsOptional()
-  @IsObject()
-  targeting?: TargetingDto;
-
-  @IsOptional()
-  @IsString()
-  currency?: string;
-
-  @IsOptional()
-  @IsNumber()
-  frequencyCapping?: number;
-
-  @IsOptional()
-  @IsString()
-  defaultIconUrl?: string;
-
-  @IsOptional()
-  @IsString()
-  defaultBrandName?: string;
-
-  @IsOptional()
-  @IsString()
-  inventoryAccessLevel?: string;
-}
-
-export class GetAccountSourcesDto {
-  @IsString()
-  accountId: string;
-}
-
-export class GetAccountCreditsDto {
-  @IsString()
-  accountId: string;
-}
-
-export class GetAccountCreditDetailsDto {
-  @IsString()
-  accountId: string;
-
-  @IsString()
-  creditId: string;
 }
 
 export class ListCampaignsDto {
