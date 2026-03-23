@@ -9,6 +9,7 @@ import { GoogleSearchConsoleModule } from './modules/google-search-console/googl
 import { OAuthModule } from './modules/oauth/oauth.module';
 import { ZemantaModule } from './modules/zemanta/zemanta.module';
 import { TradeDoublerModule } from './modules/tradedoubler/tradedoubler.module';
+import { Dv360Module } from './modules/dv360/dv360.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { TradeDoublerModule } from './modules/tradedoubler/tradedoubler.module';
     OAuthModule,
     ZemantaModule,
     TradeDoublerModule,
+    Dv360Module,
   ],
 })
 export class AppModule {}
