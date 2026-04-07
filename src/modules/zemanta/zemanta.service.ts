@@ -1,13 +1,17 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { ZemantaAdapter } from '../integrations/zemanta-adapter';
 import { DatabaseService } from '../../app/database/database.service';
+import { IntegrationTokenService } from '../integrations/integration-token.service';
 import { GenerateAccessTokenDto } from './zemanta.dto';
 
 @Injectable()
 export class ZemantaService {
   private zemantaAdapter: ZemantaAdapter;
 
-  constructor(private readonly databaseService: DatabaseService) {
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly integrationTokenService: IntegrationTokenService,
+  ) {
     this.zemantaAdapter = new ZemantaAdapter({
       clientId: process.env.ZEMANTA_CLIENT_ID || '',
       clientSecret: process.env.ZEMANTA_CLIENT_SECRET || '',
@@ -34,6 +38,21 @@ export class ZemantaService {
       });
 
       const accessToken = await adapter.getAccessToken();
+
+      if (body.userId) {
+        // Zemanta client_credentials tokens typically last 1 hour
+        const expiresAt = new Date(Date.now() + 55 * 60 * 1000);
+        await this.integrationTokenService.saveToken(body.userId, 'zemanta', {
+          accessToken,
+          expiresAt,
+          metadata: {
+            clientId: body.clientId,
+            clientSecret: body.clientSecret,
+            ...(body.baseUrl && { baseUrl: body.baseUrl }),
+          },
+        });
+      }
+
       return {
         accessToken,
         authorization: `Bearer ${accessToken}`,
@@ -46,6 +65,45 @@ export class ZemantaService {
     }
   }
 
+  private async resolveZemantaToken(
+    authorization?: string,
+    userId?: string,
+  ): Promise<string | undefined> {
+    const fromHeader = this.extractAccessToken(authorization);
+    if (fromHeader) return fromHeader;
+
+    if (!userId) return undefined;
+
+    const stored = await this.integrationTokenService.getToken(
+      userId,
+      'zemanta',
+    );
+    if (!stored) return undefined;
+
+    if (!stored.isExpired) return stored.accessToken;
+
+    // Token expired — auto-refresh using stored credentials
+    if (!stored.metadata?.clientId || !stored.metadata?.clientSecret) {
+      return undefined;
+    }
+
+    const adapter = new ZemantaAdapter({
+      clientId: stored.metadata.clientId,
+      clientSecret: stored.metadata.clientSecret,
+      baseUrl: stored.metadata.baseUrl,
+    });
+    const freshToken = await adapter.getAccessToken();
+    const expiresAt = new Date(Date.now() + 55 * 60 * 1000);
+
+    await this.integrationTokenService.saveToken(userId, 'zemanta', {
+      accessToken: freshToken,
+      expiresAt,
+      metadata: stored.metadata,
+    });
+
+    return freshToken;
+  }
+
   /**
    * List all accounts
    */
@@ -53,9 +111,10 @@ export class ZemantaService {
     includeArchived: boolean = false,
     includeDeliveryStatus: boolean = false,
     authorization?: string,
+    userId?: string,
   ) {
     try {
-      const accessToken = this.extractAccessToken(authorization);
+      const accessToken = await this.resolveZemantaToken(authorization, userId);
       const accounts = await this.zemantaAdapter.listAccounts(
         {
           includeArchived,
@@ -79,9 +138,10 @@ export class ZemantaService {
     accountId: string,
     includeDeliveryStatus: boolean = false,
     authorization?: string,
+    userId?: string,
   ) {
     try {
-      const accessToken = this.extractAccessToken(authorization);
+      const accessToken = await this.resolveZemantaToken(authorization, userId);
       const account = await this.zemantaAdapter.getAccountDetails(
         accountId,
         includeDeliveryStatus,
@@ -111,9 +171,10 @@ export class ZemantaService {
       to?: string;
     },
     authorization?: string,
+    userId?: string,
   ) {
     try {
-      const accessToken = this.extractAccessToken(authorization);
+      const accessToken = await this.resolveZemantaToken(authorization, userId);
       // If from and to dates are provided, fetch campaigns with stats
       if (params.from && params.to) {
         const { from, to, ...campaignParams } = params;
@@ -148,9 +209,10 @@ export class ZemantaService {
     from: string,
     to: string,
     authorization?: string,
+    userId?: string,
   ) {
     try {
-      const accessToken = this.extractAccessToken(authorization);
+      const accessToken = await this.resolveZemantaToken(authorization, userId);
       const stats = await this.zemantaAdapter.getCampaignStats(
         campaignId,
         from,
@@ -169,9 +231,13 @@ export class ZemantaService {
   /**
    * Get campaign budgets
    */
-  async getCampaignBudgets(campaignId: string, authorization?: string) {
+  async getCampaignBudgets(
+    campaignId: string,
+    authorization?: string,
+    userId?: string,
+  ) {
     try {
-      const accessToken = this.extractAccessToken(authorization);
+      const accessToken = await this.resolveZemantaToken(authorization, userId);
       const budgets = await this.zemantaAdapter.getCampaignBudgets(
         campaignId,
         accessToken,
@@ -193,9 +259,10 @@ export class ZemantaService {
     from?: string,
     to?: string,
     authorization?: string,
+    userId?: string,
   ) {
     try {
-      const accessToken = this.extractAccessToken(authorization);
+      const accessToken = await this.resolveZemantaToken(authorization, userId);
       const result = await this.zemantaAdapter.getCampaignDetails(
         campaignId,
         from,
@@ -265,6 +332,7 @@ export class ZemantaService {
     from: string,
     to: string,
     authorization?: string,
+    userId?: string,
   ) {
     try {
       // Import Prisma client dynamically to avoid circular dependencies
@@ -272,7 +340,7 @@ export class ZemantaService {
         await import('../../app/database/database.service');
       const prisma = new DatabaseService();
 
-      const accessToken = this.extractAccessToken(authorization);
+      const accessToken = await this.resolveZemantaToken(authorization, userId);
 
       // Get all accounts
       const accounts = await this.zemantaAdapter.listAccounts(
@@ -301,6 +369,7 @@ export class ZemantaService {
               to,
             },
             accessToken ? `Bearer ${accessToken}` : undefined,
+            userId,
           );
 
           // Store each campaign

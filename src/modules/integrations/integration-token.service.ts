@@ -1,0 +1,96 @@
+import { Injectable } from '@nestjs/common';
+import { DatabaseService } from '../../app/database/database.service';
+import { decrypt, encrypt } from './token-encryption';
+
+export type SaveTokenData = {
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt?: Date;
+  scope?: string;
+  /** Provider-specific extras: e.g. { clientId, clientSecret } for Zemanta */
+  metadata?: Record<string, string>;
+};
+
+export type LoadedToken = {
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt?: Date | null;
+  scope?: string | null;
+  metadata?: Record<string, string>;
+  isExpired: boolean;
+};
+
+@Injectable()
+export class IntegrationTokenService {
+  constructor(private readonly databaseService: DatabaseService) {}
+
+  async saveToken(
+    userId: string,
+    provider: string,
+    data: SaveTokenData,
+  ): Promise<void> {
+    const encryptedAccess = encrypt(data.accessToken);
+    const encryptedRefresh = data.refreshToken
+      ? encrypt(data.refreshToken)
+      : null;
+    const encryptedMetadata = data.metadata
+      ? encrypt(JSON.stringify(data.metadata))
+      : null;
+
+    await this.databaseService.integrationToken.upsert({
+      where: { userId_provider: { userId, provider } },
+      create: {
+        userId,
+        provider,
+        accessToken: encryptedAccess,
+        refreshToken: encryptedRefresh,
+        expiresAt: data.expiresAt ?? null,
+        scope: data.scope ?? null,
+        metadata: encryptedMetadata,
+      },
+      update: {
+        accessToken: encryptedAccess,
+        ...(encryptedRefresh !== null && { refreshToken: encryptedRefresh }),
+        expiresAt: data.expiresAt ?? null,
+        scope: data.scope ?? null,
+        ...(encryptedMetadata !== null && { metadata: encryptedMetadata }),
+      },
+    });
+  }
+
+  async getToken(
+    userId: string,
+    provider: string,
+  ): Promise<LoadedToken | null> {
+    const record = await this.databaseService.integrationToken.findUnique({
+      where: { userId_provider: { userId, provider } },
+    });
+
+    if (!record) return null;
+
+    const accessToken = decrypt(record.accessToken);
+    const refreshToken = record.refreshToken
+      ? decrypt(record.refreshToken)
+      : undefined;
+    const metadata = record.metadata
+      ? (JSON.parse(decrypt(record.metadata)) as Record<string, string>)
+      : undefined;
+
+    const isExpired = record.expiresAt ? new Date() >= record.expiresAt : false;
+
+    return {
+      accessToken,
+      refreshToken,
+      expiresAt: record.expiresAt,
+      scope: record.scope,
+      metadata,
+      isExpired,
+    };
+  }
+
+  async deleteToken(userId: string, provider: string): Promise<void> {
+    await this.databaseService.integrationToken.deleteMany({
+      where: { userId, provider },
+    });
+  }
+}

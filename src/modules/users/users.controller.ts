@@ -41,7 +41,6 @@ export class UsersController {
     const { user } = req;
     const findOneUser = await this.usersService.findMe({
       userId: user.id,
-      organizationId: user?.organizationId,
     });
     if (!findOneUser)
       throw new HttpException(`Invalid credentials`, HttpStatus.NOT_FOUND);
@@ -208,11 +207,8 @@ export class UsersController {
     @Req() req,
     @Param('userId', ParseUUIDPipe) userId: string,
   ) {
-    const { user } = req;
-
     const findOneUser = await this.usersService.findOneBy({
       userId,
-      organizationId: user?.organizationId,
     });
     if (!findOneUser)
       throw new HttpException(
@@ -221,6 +217,27 @@ export class UsersController {
       );
 
     return reply({ res, results: findOneUser });
+  }
+
+  /** Get one provider profile for a user */
+  @Get(`/:userId/profiles/:provider`)
+  async findUserProviderProfile(
+    @Res() res,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('provider') provider: string,
+  ) {
+    const profile = await this.usersService.findProviderProfileByUserId(
+      userId,
+      provider,
+    );
+
+    if (!profile)
+      throw new HttpException(
+        `No profile found for userId=${userId} and provider=${provider}`,
+        HttpStatus.NOT_FOUND,
+      );
+
+    return reply({ res, results: profile });
   }
 
   /** Delete user */
@@ -234,7 +251,6 @@ export class UsersController {
     const { user } = req;
     const findOneUser = await this.usersService.findOneBy({
       userId,
-      organizationId: user?.organizationId,
     });
 
     if (!findOneUser && userId !== user?.id)

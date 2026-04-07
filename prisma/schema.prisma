@@ -13,17 +13,59 @@ datasource db {
 }
 
 model User {
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
-  id             String    @id @default(uuid())
-  email          String    @unique
-  password       String?
-  provider       String?
-  organizationId String?
-  confirmedAt    DateTime?
-  profile        Profile?
-  organization   Job?      @relation(fields: [organizationId], references: [id])
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  deletedAt          DateTime?
+  id                 String             @id @default(uuid())
+  email              String             @unique
+  password           String?
+  provider           String?
+  name               String?
+  confirmedAt        DateTime?
+  profile            Profile?
+  integrationTokens  IntegrationToken[]
+  providerProfiles   ProviderProfile[]
+  tradeDoublerReports TradeDoublerReport[]
+  tradeDoublerJobs   TradeDoublerJob[]
+}
+
+model TradeDoublerJob {
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  id                 String             @id @default(uuid())
+  userId             String
+  status             String
+  fromDate           DateTime
+  toDate             DateTime
+  reportCurrencyCode String
+  reportType         String?
+  intervalType       String?
+  completedAt        DateTime?
+  errorMessage       String?            @db.Text
+  rowsCount          Int                @default(0)
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reports            TradeDoublerReport[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model IntegrationToken {
+  id           String    @id @default(uuid())
+  userId       String
+  provider     String    // "dv360" | "zemanta" | "rtbhouse" etc.
+  accessToken  String    @db.Text
+  refreshToken String?   @db.Text
+  expiresAt    DateTime?
+  scope        String?
+  metadata     String?   @db.Text // encrypted JSON for provider-specific data
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@index([provider])
 }
 
 model Profile {
@@ -35,13 +77,37 @@ model Profile {
   lastName    String
   address     String?
   phone       String?
-  image       String?
   description String?   @db.Text
-  testimonial String?   @db.Text
   city        String?
-  currencyId  String?
+  currency    String?
+  country     String?
   userId      String    @unique
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProviderProfile {
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  deletedAt         DateTime?
+  id                String   @id @default(uuid())
+  userId            String
+  provider          String
+  providerAccountId String?
+  displayName       String?
+  email             String?
+  username          String?
+  phone             String?
+  address           String?
+  city              String?
+  country           String?
+  currency          String?
+  websiteUrl        String?
+  rawData           String?  @db.Text
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@index([provider])
 }
 
 model Job {
@@ -64,7 +130,6 @@ model Job {
   userSegment      String?
   provider         String?
   providerJobId    String?
-  users            User[]
 }
 
 model TopQuery {
@@ -194,10 +259,12 @@ model TradeDoublerReport {
   updatedAt           DateTime  @updatedAt
   deletedAt           DateTime?
   id                  String    @id @default(uuid())
+  userId              String
+  jobId               String?
   date                DateTime
   organizationName    String
   organizationId      String
-  programName         String
+  campaignName        String
   programId           String
   currency            String
   country             String?
@@ -208,8 +275,12 @@ model TradeDoublerReport {
   impressions         Int       @default(0)
   clicks              Int       @default(0)
   currencyCode        String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job                 TradeDoublerJob? @relation(fields: [jobId], references: [id], onDelete: SetNull)
 
-  @@unique([date, organizationId, programId, country])
+  @@unique([userId, jobId, date, organizationId, programId, country])
+  @@index([userId])
+  @@index([jobId])
   @@index([date])
   @@index([organizationId])
   @@index([programId])

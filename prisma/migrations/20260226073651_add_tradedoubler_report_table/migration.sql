@@ -7,10 +7,50 @@ CREATE TABLE "User" (
     "email" TEXT NOT NULL,
     "password" TEXT,
     "provider" TEXT,
+    "name" TEXT,
     "organizationId" TEXT,
     "confirmedAt" TIMESTAMP(3),
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "IntegrationToken" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "provider" TEXT NOT NULL,
+    "accessToken" TEXT NOT NULL,
+    "refreshToken" TEXT,
+    "expiresAt" TIMESTAMP(3),
+    "scope" TEXT,
+    "metadata" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "IntegrationToken_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ProviderProfile" (
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "provider" TEXT NOT NULL,
+    "providerAccountId" TEXT,
+    "displayName" TEXT,
+    "email" TEXT,
+    "username" TEXT,
+    "phone" TEXT,
+    "address" TEXT,
+    "city" TEXT,
+    "country" TEXT,
+    "currency" TEXT,
+    "websiteUrl" TEXT,
+    "rawData" TEXT,
+
+    CONSTRAINT "ProviderProfile_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -182,23 +222,45 @@ CREATE TABLE "TradeDoublerReport" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
     "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
     "date" TIMESTAMP(3) NOT NULL,
-    "campaignId" INTEGER NOT NULL,
-    "campaignName" TEXT NOT NULL,
-    "status" TEXT,
-    "clicks" INTEGER NOT NULL DEFAULT 0,
-    "impressions" INTEGER NOT NULL DEFAULT 0,
-    "conversions" INTEGER NOT NULL DEFAULT 0,
-    "conversionValue" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "cost" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "organizationName" TEXT NOT NULL,
+    "organizationId" TEXT NOT NULL,
+    "programName" TEXT NOT NULL,
+    "programId" TEXT NOT NULL,
+    "currency" TEXT NOT NULL,
     "country" TEXT,
-    "currency" TEXT,
+    "publisherCommission" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "orderValue" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "totalCommission" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "vatAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "impressions" INTEGER NOT NULL DEFAULT 0,
+    "clicks" INTEGER NOT NULL DEFAULT 0,
+    "currencyCode" TEXT NOT NULL,
 
     CONSTRAINT "TradeDoublerReport_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "IntegrationToken_userId_provider_key" ON "IntegrationToken"("userId", "provider");
+
+-- CreateIndex
+CREATE INDEX "IntegrationToken_userId_idx" ON "IntegrationToken"("userId");
+
+-- CreateIndex
+CREATE INDEX "IntegrationToken_provider_idx" ON "IntegrationToken"("provider");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProviderProfile_userId_provider_key" ON "ProviderProfile"("userId", "provider");
+
+-- CreateIndex
+CREATE INDEX "ProviderProfile_userId_idx" ON "ProviderProfile"("userId");
+
+-- CreateIndex
+CREATE INDEX "ProviderProfile_provider_idx" ON "ProviderProfile"("provider");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Profile_userId_key" ON "Profile"("userId");
@@ -246,22 +308,37 @@ CREATE INDEX "ZemantaCampaignBudget_state_idx" ON "ZemantaCampaignBudget"("state
 CREATE INDEX "ZemantaCampaignBudget_startDate_endDate_idx" ON "ZemantaCampaignBudget"("startDate", "endDate");
 
 -- CreateIndex
+CREATE INDEX "TradeDoublerReport_userId_idx" ON "TradeDoublerReport"("userId");
+
+-- CreateIndex
 CREATE INDEX "TradeDoublerReport_date_idx" ON "TradeDoublerReport"("date");
 
 -- CreateIndex
-CREATE INDEX "TradeDoublerReport_campaignId_idx" ON "TradeDoublerReport"("campaignId");
+CREATE INDEX "TradeDoublerReport_organizationId_idx" ON "TradeDoublerReport"("organizationId");
+
+-- CreateIndex
+CREATE INDEX "TradeDoublerReport_programId_idx" ON "TradeDoublerReport"("programId");
 
 -- CreateIndex
 CREATE INDEX "TradeDoublerReport_country_idx" ON "TradeDoublerReport"("country");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "TradeDoublerReport_date_campaignId_country_key" ON "TradeDoublerReport"("date", "campaignId", "country");
+CREATE UNIQUE INDEX "TradeDoublerReport_userId_date_organizationId_programId_country_key" ON "TradeDoublerReport"("userId", "date", "organizationId", "programId", "country");
 
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Job"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "IntegrationToken" ADD CONSTRAINT "IntegrationToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ProviderProfile" ADD CONSTRAINT "ProviderProfile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Profile" ADD CONSTRAINT "Profile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ZemantaCampaignBudget" ADD CONSTRAINT "ZemantaCampaignBudget_campaignId_fkey" FOREIGN KEY ("campaignId") REFERENCES "ZemantaCampaign"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TradeDoublerReport" ADD CONSTRAINT "TradeDoublerReport_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

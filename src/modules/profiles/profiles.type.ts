@@ -29,12 +29,4 @@ export const UserProfileSelect = {
   firstName: true,
   profession: true,
   countryName: true,
-  description: true,
-  currency: {
-    select: {
-      name: true,
-      code: true,
-      symbol: true,
-    },
-  },
 };

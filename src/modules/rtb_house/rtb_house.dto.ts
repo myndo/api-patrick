@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class LoginRTBHouseDto {
   @IsNotEmpty()
@@ -8,6 +8,11 @@ export class LoginRTBHouseDto {
   @IsNotEmpty()
   @IsString()
   password: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  userId?: string;
 }
 
 export class FetchRTBHouseDataDto {
@@ -22,4 +27,9 @@ export class FetchRTBHouseDataDto {
   @IsNotEmpty()
   @IsString()
   advertiserId: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  userId?: string;
 }

@@ -6,18 +6,22 @@ import {
   HttpException,
   HttpStatus,
   Post,
+  Query,
   Res,
 } from '@nestjs/common';
 import { sign, verify } from 'jsonwebtoken';
 import { config } from '../../app/config';
 import { reply } from '../../app/utils/reply';
-
+import { IntegrationTokenService } from '../integrations/integration-token.service';
 import { JobsService } from './rtb_house.service';
 import { FetchRTBHouseDataDto, LoginRTBHouseDto } from './rtb_house.dto';
 
 @Controller('rtbhouse')
 export class RtbHouseController {
-  constructor(private readonly jobsService: JobsService) {}
+  constructor(
+    private readonly jobsService: JobsService,
+    private readonly integrationTokenService: IntegrationTokenService,
+  ) {}
 
   private createRtbHousePlatformToken(username: string, password: string) {
     return sign(
@@ -61,11 +65,55 @@ export class RtbHouseController {
     };
   }
 
+  private async resolveCredentials(
+    authHeader?: string,
+    userId?: string,
+  ): Promise<{ username: string; password: string }> {
+    if (authHeader?.startsWith('Bearer ')) {
+      const accessToken = authHeader.slice(7);
+      return this.verifyRtbHousePlatformToken(accessToken);
+    }
+
+    if (!userId) {
+      throw new HttpException(
+        'Missing Authorization header. Use Bearer <accessToken> or provide userId with stored RTB House credentials.',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    const stored = await this.integrationTokenService.getToken(
+      userId,
+      'rtbhouse',
+    );
+    if (!stored) {
+      throw new HttpException(
+        `No stored RTB House credentials found for userId=${userId}. Login first using /rtbhouse/auth/login.`,
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    if (stored.isExpired) {
+      throw new HttpException(
+        'Stored RTB House credentials expired. Please login again.',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    if (stored.metadata?.username && stored.metadata?.password) {
+      return {
+        username: stored.metadata.username,
+        password: stored.metadata.password,
+      };
+    }
+
+    return this.verifyRtbHousePlatformToken(stored.accessToken);
+  }
+
   /** Login with username/password to get local platform authorization token */
   @Post(`/auth/login`)
   async login(@Res() res, @Body() body: LoginRTBHouseDto) {
     try {
-      const { username, password } = body;
+      const { username, password, userId } = body;
 
       if (!username || !password) {
         throw new HttpException(
@@ -75,6 +123,17 @@ export class RtbHouseController {
       }
 
       const accessToken = this.createRtbHousePlatformToken(username, password);
+
+      if (userId) {
+        await this.integrationTokenService.saveToken(userId, 'rtbhouse', {
+          accessToken,
+          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          metadata: {
+            username,
+            password,
+          },
+        });
+      }
 
       return reply({
         res,
@@ -94,14 +153,13 @@ export class RtbHouseController {
 
   /** Get all jobs */
   @Get(`/jobs/data`)
-  async find_All(@Res() res, @Headers('authorization') authHeader: string) {
+  async find_All(
+    @Res() res,
+    @Headers('authorization') authHeader: string,
+    @Query('userId') userId?: string,
+  ) {
     try {
-      if (!authHeader) {
-        throw new HttpException(
-          'Missing Authorization header. Use Bearer <accessToken> format',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
+      await this.resolveCredentials(authHeader, userId);
 
       const jobs = await this.jobsService.findAll();
 
@@ -129,7 +187,7 @@ export class RtbHouseController {
     @Body() body: FetchRTBHouseDataDto,
   ) {
     try {
-      const { dayFrom, dayTo, advertiserId } = body;
+      const { dayFrom, dayTo, advertiserId, userId } = body;
 
       // Validate required fields
       if (!dayFrom || !dayTo || !advertiserId) {
@@ -139,16 +197,10 @@ export class RtbHouseController {
         );
       }
 
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new HttpException(
-          'Missing or invalid Authorization header. Use Bearer <accessToken> format. Get token from POST /rtbhouse/auth/login',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-
-      const accessToken = authHeader.slice(7);
-      const { username, password } =
-        this.verifyRtbHousePlatformToken(accessToken);
+      const { username, password } = await this.resolveCredentials(
+        authHeader,
+        userId,
+      );
 
       await this.jobsService.fetchAndSaveRTBHouseData(dayFrom, dayTo, {
         baseUrl: 'https://api.panel.rtbhouse.com/v5',

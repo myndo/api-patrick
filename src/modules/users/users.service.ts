@@ -62,12 +62,7 @@ export class UsersService {
   }
 
   /** Find one User in  database. */
-  async findOneBy({
-    userId,
-    organizationId,
-    email,
-    provider,
-  }: GetOneUsersSelections) {
+  async findOneBy({ userId, email }: GetOneUsersSelections) {
     const where: FilterGroup<Prisma.UserWhereInput> = {
       deletedAt: null,
       AND: [],
@@ -77,16 +72,8 @@ export class UsersService {
       where.AND.push({ email: { contains: email, mode: 'insensitive' } });
     }
 
-    if (provider) {
-      where.AND.push({ provider });
-    }
-
     if (userId) {
       where.AND.push({ id: userId });
-    }
-
-    if (organizationId) {
-      where.AND.push({ organizationId });
     }
 
     const user = await this.client.user.findFirst({
@@ -95,8 +82,7 @@ export class UsersService {
         id: true,
         email: true,
         password: true,
-        provider: true,
-        organizationId: true,
+        name: true,
         confirmedAt: true,
         profile: true,
       },
@@ -106,7 +92,7 @@ export class UsersService {
   }
 
   /** Find me User in  database. */
-  async findMe({ userId, organizationId }: GetOneUsersSelections) {
+  async findMe({ userId }: GetOneUsersSelections) {
     const where: FilterGroup<Prisma.UserWhereInput> = {
       deletedAt: null,
       AND: [],
@@ -116,15 +102,21 @@ export class UsersService {
       where.AND.push({ id: userId });
     }
 
-    if (organizationId) {
-      where.AND.push({ organizationId });
-    }
-
     const user = await this.client.user.findFirst({
       where,
     });
 
     return user;
+  }
+
+  async findProviderProfileByUserId(userId: string, provider: string) {
+    return this.client.providerProfile.findFirst({
+      where: {
+        userId,
+        provider: provider.toLowerCase(),
+        deletedAt: null,
+      },
+    });
   }
 
   /** Create one User in database. */

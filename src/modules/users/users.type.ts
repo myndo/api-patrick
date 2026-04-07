@@ -21,12 +21,10 @@ export type GetOneUsersSelections = {
   email?: User['email'];
   userId?: User['id'];
   provider?: User['provider'];
-  organizationId?: User['organizationId'];
 };
 
 export type UpdateUsersSelections = {
   userId?: User['id'];
-  organizationId?: User['organizationId'];
 };
 
 export type CreateUsersOptions = Prisma.UserCreateInput;

@@ -14,6 +14,12 @@ export class GenerateAccessTokenDto {
   @IsString()
   @IsNotEmpty()
   baseUrl?: string;
+
+  /** If provided, the resulting token will be persisted for this user */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  userId?: string;
 }
 
 export class ListAccountsDto {

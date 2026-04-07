@@ -26,4 +26,35 @@ export class FetchTradeDoublerDataDto {
   @IsNotEmpty()
   @IsString()
   dateTo: string;
+
+  /** Required to save reports per specific user */
+  @IsNotEmpty()
+  @IsString()
+  userId: string;
+}
+
+export class CreateTradeDoublerJobDto {
+  @IsNotEmpty()
+  @IsString()
+  fromDate: string;
+
+  @IsNotEmpty()
+  @IsString()
+  toDate: string;
+
+  @IsNotEmpty()
+  @IsString()
+  reportCurrencyCode: string;
+
+  @IsNotEmpty()
+  @IsString()
+  userId: string;
+
+  @IsNotEmpty()
+  @IsString()
+  reportType?: string;
+
+  @IsNotEmpty()
+  @IsString()
+  intervalType?: string;
 }

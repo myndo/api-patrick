@@ -46,6 +46,11 @@ export class Dv360Adapter {
     return tokens;
   }
 
+  async refreshAccessToken() {
+    const { credentials } = await this.oauth2Client.refreshAccessToken();
+    return credentials;
+  }
+
   async listPartners(pageSize: number = 100) {
     const response = await this.displayvideo.partners.list({
       pageSize,

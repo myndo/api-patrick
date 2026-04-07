@@ -1,10 +1,11 @@
 import axios from 'axios';
 
 export interface TradeDoublerConfig {
-  secret: string;
-  clientId: string;
-  username: string;
-  password: string;
+  secret?: string;
+  clientId?: string;
+  username?: string;
+  password?: string;
+  accessToken?: string;
   organizationId?: string;
   baseUrl?: string;
 }
@@ -42,11 +43,23 @@ export class TradeDoublerServiceAdapter {
   constructor(config: TradeDoublerConfig) {
     this.config = config;
     this.baseUrl = config.baseUrl || 'https://connect.tradedoubler.com';
+    this.bearerToken = config.accessToken || null;
   }
 
   private async getBearerToken(): Promise<string> {
     if (this.bearerToken) {
       return this.bearerToken;
+    }
+
+    if (
+      !this.config.clientId ||
+      !this.config.secret ||
+      !this.config.username ||
+      !this.config.password
+    ) {
+      throw new Error(
+        'Missing TradeDoubler credentials. Provide accessToken or username/password/clientId/secret.',
+      );
     }
 
     try {
@@ -87,6 +100,108 @@ export class TradeDoublerServiceAdapter {
       'Content-Type': 'application/json',
       Accept: 'application/json',
     };
+  }
+
+  async fetchStatisticsReport(dateFrom: string, dateTo: string): Promise<any> {
+    const formattedFromDate = dateFrom.replace(/-/g, '');
+    const formattedToDate = dateTo.replace(/-/g, '');
+
+    const response = await axios.get(
+      `${this.baseUrl}/advertiser/report/statistics`,
+      {
+        headers: await this.getAuthHeader(),
+        params: {
+          fromDate: formattedFromDate,
+          toDate: formattedToDate,
+          reportCurrencyCode: 'EUR',
+          intervalType: 'day',
+          reportType: 'program',
+        },
+      },
+    );
+
+    return response.data;
+  }
+
+  async fetchTransactionsReport(
+    dateFrom: string,
+    dateTo: string,
+  ): Promise<any> {
+    const formattedFromDate = dateFrom.replace(/-/g, '');
+    const formattedToDate = dateTo.replace(/-/g, '');
+
+    const response = await axios.get(
+      `${this.baseUrl}/advertiser/report/transactions`,
+      {
+        headers: await this.getAuthHeader(),
+        params: {
+          fromDate: formattedFromDate,
+          toDate: formattedToDate,
+          reportCurrencyCode: 'EUR',
+          limit: 100,
+          offset: 0,
+        },
+      },
+    );
+
+    return response.data;
+  }
+
+  async fetchStatisticsAndTransactions(
+    fromDate: string,
+    toDate: string,
+    reportCurrencyCode: string,
+    reportType?: string,
+    intervalType?: string,
+  ): Promise<TradeDoublerReportData[]> {
+    const formattedFromDate = fromDate.replace(/-/g, '');
+    const formattedToDate = toDate.replace(/-/g, '');
+
+    if (!this.config.organizationId) {
+      throw new Error('organizationId is required for TradeDoubler API');
+    }
+
+    const metrics: AggregatedMetrics = {};
+    const programInfo = await this.fetchPrograms();
+
+    await Promise.allSettled([
+      this.fetchTransactions(
+        formattedFromDate,
+        formattedToDate,
+        metrics,
+        programInfo,
+        reportCurrencyCode,
+      ),
+      this.fetchStatistics(
+        formattedFromDate,
+        formattedToDate,
+        metrics,
+        programInfo,
+        reportCurrencyCode,
+        intervalType,
+        reportType,
+      ),
+    ]);
+
+    return Object.values(metrics)
+      .map((metric) => ({
+        date: metric.date || new Date().toISOString(),
+        organizationName: metric.organizationName || '',
+        organizationId:
+          metric.organizationId || String(this.config.organizationId),
+        campaignName: metric.campaignName || '',
+        programId: metric.programId || '',
+        currency: metric.currency || reportCurrencyCode,
+        country: metric.country || 'GLOBAL',
+        publisherCommission: metric.publisherCommission || 0,
+        orderValue: metric.orderValue || 0,
+        totalCommission: metric.totalCommission || 0,
+        vatAmount: metric.vatAmount || 0,
+        impressions: metric.impressions || 0,
+        clicks: metric.clicks || 0,
+        currencyCode: metric.currencyCode || reportCurrencyCode,
+      }))
+      .filter((item) => item.organizationId && item.programId && item.date);
   }
 
   async fetchProgramPerformance(
@@ -272,6 +387,7 @@ export class TradeDoublerServiceAdapter {
     toDate: string,
     metrics: AggregatedMetrics,
     programInfo: Record<string, TradeDoublerProgramInfo>,
+    reportCurrencyCode = 'EUR',
   ): Promise<void> {
     try {
       const response = await axios.get(
@@ -281,7 +397,7 @@ export class TradeDoublerServiceAdapter {
           params: {
             fromDate,
             toDate,
-            reportCurrencyCode: 'EUR',
+            reportCurrencyCode,
             limit: 100,
             offset: 0,
           },
@@ -330,6 +446,9 @@ export class TradeDoublerServiceAdapter {
     toDate: string,
     metrics: AggregatedMetrics,
     programInfo: Record<string, TradeDoublerProgramInfo>,
+    reportCurrencyCode = 'EUR',
+    intervalType = 'day',
+    reportType = 'program',
   ): Promise<void> {
     try {
       const response = await axios.get(
@@ -339,12 +458,13 @@ export class TradeDoublerServiceAdapter {
           params: {
             fromDate,
             toDate,
-            reportCurrencyCode: 'EUR',
-            intervalType: 'day',
-            reportType: 'program',
+            reportCurrencyCode,
+            intervalType,
+            reportType,
           },
         },
       );
+      console.log(`Statistics response:`, response.data);
 
       const items = response.data?.items || [];
       if (!Array.isArray(items)) return;

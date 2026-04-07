@@ -77,6 +77,7 @@ export class Dv360Controller {
     const data = await this.dv360Service.listPartners(
       query.pageSize,
       authorization,
+      query.userId,
     );
 
     return reply({
@@ -100,6 +101,7 @@ export class Dv360Controller {
       query.partnerId,
       query.pageSize,
       authorization,
+      query.userId,
     );
 
     return reply({
@@ -123,6 +125,7 @@ export class Dv360Controller {
       query.advertiserId,
       query.pageSize,
       authorization,
+      query.userId,
     );
 
     return reply({

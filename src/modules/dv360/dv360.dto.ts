@@ -10,6 +10,12 @@ export class ExchangeDv360CodeDto {
   @IsString()
   @IsNotEmpty()
   redirectUri?: string;
+
+  /** If provided, the resulting tokens will be persisted for this user */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  userId?: string;
 }
 
 export class ListDv360PartnersDto {
@@ -18,6 +24,11 @@ export class ListDv360PartnersDto {
   @IsInt()
   @Min(1)
   pageSize?: number = 100;
+
+  /** If provided and no Authorization header, tokens are loaded from DB */
+  @IsOptional()
+  @IsString()
+  userId?: string;
 }
 
 export class ListDv360AdvertisersDto {
@@ -30,6 +41,10 @@ export class ListDv360AdvertisersDto {
   @IsInt()
   @Min(1)
   pageSize?: number = 100;
+
+  @IsOptional()
+  @IsString()
+  userId?: string;
 }
 
 export class ListDv360CampaignsDto {
@@ -42,4 +57,8 @@ export class ListDv360CampaignsDto {
   @IsInt()
   @Min(1)
   pageSize?: number = 100;
+
+  @IsOptional()
+  @IsString()
+  userId?: string;
 }

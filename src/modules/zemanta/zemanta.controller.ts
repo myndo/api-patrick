@@ -72,12 +72,14 @@ export class ZemantaController {
   async list_Accounts(
     @Query(new ValidationPipe({ transform: true })) query: ListAccountsDto,
     @Headers('authorization') authorization: string,
-    @Res() res,
+    @Query('userId') userId?: string,
+    @Res() res?,
   ) {
     const data = await this.zemantaService.listAccounts(
       query.includeArchived,
       query.includeDeliveryStatus,
       authorization,
+      userId,
     );
     return reply({
       res,
@@ -97,12 +99,14 @@ export class ZemantaController {
     @Param('accountId') accountId: string,
     @Query('includeDeliveryStatus') includeDeliveryStatus: boolean,
     @Headers('authorization') authorization: string,
-    @Res() res,
+    @Query('userId') userId?: string,
+    @Res() res?,
   ) {
     const data = await this.zemantaService.getAccountDetails(
       accountId,
       includeDeliveryStatus,
       authorization,
+      userId,
     );
     return reply({
       res,
@@ -121,9 +125,14 @@ export class ZemantaController {
   async list_Campaigns(
     @Query(new ValidationPipe({ transform: true })) query: ListCampaignsDto,
     @Headers('authorization') authorization: string,
-    @Res() res,
+    @Query('userId') userId?: string,
+    @Res() res?,
   ) {
-    const data = await this.zemantaService.listCampaigns(query, authorization);
+    const data = await this.zemantaService.listCampaigns(
+      query,
+      authorization,
+      userId,
+    );
     return reply({
       res,
       results: {
@@ -144,6 +153,7 @@ export class ZemantaController {
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Headers('authorization') authorization?: string,
+    @Query('userId') userId?: string,
     @Res() res?,
   ) {
     const result = await this.zemantaService.getCampaignDetails(
@@ -151,6 +161,7 @@ export class ZemantaController {
       from,
       to,
       authorization,
+      userId,
     );
     return reply({
       res,
@@ -171,7 +182,8 @@ export class ZemantaController {
     @Query('from') from: string,
     @Query('to') to: string,
     @Headers('authorization') authorization: string,
-    @Res() res,
+    @Query('userId') userId?: string,
+    @Res() res?,
   ) {
     if (!from || !to) {
       return reply({
@@ -187,6 +199,7 @@ export class ZemantaController {
       from,
       to,
       authorization,
+      userId,
     );
     return reply({
       res,
