@@ -26,18 +26,19 @@ model User {
   integrationTokens  IntegrationToken[]
   providerProfiles   ProviderProfile[]
   tradeDoublerReports TradeDoublerReport[]
-  tradeDoublerJobs   TradeDoublerJob[]
+  providerJobs       ProviderJob[]
 }
 
-model TradeDoublerJob {
+model ProviderJob {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   id                 String             @id @default(uuid())
   userId             String
-  status             String
+  provider           String             @default("tradedoubler")
+  status             Int                @default(0)
   fromDate           DateTime
   toDate             DateTime
-  reportCurrencyCode String
+  reportCurrencyCode String?
   reportType         String?
   intervalType       String?
   completedAt        DateTime?
@@ -47,6 +48,7 @@ model TradeDoublerJob {
   reports            TradeDoublerReport[]
 
   @@index([userId])
+  @@index([provider])
   @@index([status])
 }
 
@@ -110,7 +112,7 @@ model ProviderProfile {
   @@index([provider])
 }
 
-model Job {
+model RTBHouseReport {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime?
@@ -276,7 +278,7 @@ model TradeDoublerReport {
   clicks              Int       @default(0)
   currencyCode        String
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job                 TradeDoublerJob? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  job                 ProviderJob? @relation(fields: [jobId], references: [id], onDelete: SetNull)
 
   @@unique([userId, jobId, date, organizationId, programId, country])
   @@index([userId])

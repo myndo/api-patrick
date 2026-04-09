@@ -143,9 +143,10 @@ export class RtbHouseController {
             'Login successful. Use this token in Authorization header: Bearer <accessToken>',
         },
       });
-    } catch (error) {
+    } catch (error: unknown) {
       throw new HttpException(
-        error.message || 'Failed to create RTBHouse authorization token',
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to create RTBHouse authorization token',
         HttpStatus.UNAUTHORIZED,
       );
     }
@@ -171,9 +172,10 @@ export class RtbHouseController {
           message: `RTBHouse data fetched successfully`,
         },
       });
-    } catch (error) {
+    } catch (error: unknown) {
       throw new HttpException(
-        error.message || 'Failed to fetch RTBHouse data',
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to fetch RTBHouse data',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -215,9 +217,10 @@ export class RtbHouseController {
           message: 'RTBHouse data fetched and saved successfully',
         },
       });
-    } catch (error) {
+    } catch (error: unknown) {
       throw new HttpException(
-        error.message || 'Failed to fetch RTBHouse data',
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to fetch RTBHouse data',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

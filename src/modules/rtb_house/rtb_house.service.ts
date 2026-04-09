@@ -16,19 +16,19 @@ export class JobsService {
   constructor(private readonly client: DatabaseService) {}
 
   async findAll() {
-    const where: FilterGroup<Prisma.JobWhereInput> = {
+    const where: FilterGroup<Prisma.RTBHouseReportWhereInput> = {
       deletedAt: null,
       AND: [],
     };
 
-    const jobs = await this.client.job.findMany({ where });
+    const jobs = await this.client.rTBHouseReport.findMany({ where });
 
     return jobs;
   }
 
   /** Find one Job in database. */
   async findOneBy(selections: GetOneJobSelections) {
-    const where: FilterGroup<Prisma.JobWhereInput> = {
+    const where: FilterGroup<Prisma.RTBHouseReportWhereInput> = {
       deletedAt: null,
       AND: [],
     };
@@ -38,7 +38,7 @@ export class JobsService {
       where.AND.push({ id: jobId });
     }
 
-    const organization = await this.client.job.findFirst({
+    const organization = await this.client.rTBHouseReport.findFirst({
       where,
       select: JobSelect,
     });
@@ -48,14 +48,14 @@ export class JobsService {
 
   /** Create one Job in database. */
   async createOne(options: CreateJobOptions) {
-    return await this.client.job.create({
+    return await this.client.rTBHouseReport.create({
       data: options,
     });
   }
 
   /** Update one Job in database. */
   async updateOne({ jobId }: UpdateJobSelections, options: UpdateJobOptions) {
-    return await this.client.job.update({
+    return await this.client.rTBHouseReport.update({
       where: { id: jobId },
       data: options,
     });

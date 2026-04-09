@@ -50,11 +50,9 @@ export class CreateTradeDoublerJobDto {
   @IsString()
   userId: string;
 
-  @IsNotEmpty()
   @IsString()
   reportType?: string;
 
-  @IsNotEmpty()
   @IsString()
   intervalType?: string;
 }

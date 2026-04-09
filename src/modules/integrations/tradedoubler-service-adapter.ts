@@ -46,6 +46,10 @@ export class TradeDoublerServiceAdapter {
     this.bearerToken = config.accessToken || null;
   }
 
+  setAccessToken(token: string): void {
+    this.bearerToken = token;
+  }
+
   private async getBearerToken(): Promise<string> {
     if (this.bearerToken) {
       return this.bearerToken;
@@ -88,7 +92,7 @@ export class TradeDoublerServiceAdapter {
       return this.bearerToken;
     } catch (error) {
       throw new Error(
-        `Failed to obtain Bearer token from TradeDoubler OAuth: ${error.message}`,
+        `Failed to obtain Bearer token from TradeDoubler OAuth: ${error}`,
       );
     }
   }
@@ -222,12 +226,6 @@ export class TradeDoublerServiceAdapter {
     try {
       // Fetch from multiple endpoints and aggregate data
       await Promise.allSettled([
-        this.fetchPrepaymentBalance(
-          formattedFromDate,
-          formattedToDate,
-          metrics,
-          programInfo,
-        ),
         this.fetchTransactions(
           formattedFromDate,
           formattedToDate,
@@ -264,7 +262,9 @@ export class TradeDoublerServiceAdapter {
         .filter((item) => item.organizationId && item.programId && item.date);
     } catch (error) {
       throw new Error(
-        `Failed to fetch TradeDoubler program performance: ${error.message}`,
+        `Failed to fetch TradeDoubler program performance: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
       );
     }
   }
@@ -314,71 +314,15 @@ export class TradeDoublerServiceAdapter {
         {} as Record<string, TradeDoublerProgramInfo>,
       );
     } catch (error) {
-      if (error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         console.warn(
           `Failed to fetch programs: ${error.response.status} - ${JSON.stringify(error.response.data)}`,
         );
       } else {
-        console.warn('Failed to fetch programs:', error.message);
+        console.warn('Failed to fetch programs:', error);
       }
 
       return {};
-    }
-  }
-
-  private async fetchPrepaymentBalance(
-    fromDate: string,
-    toDate: string,
-    metrics: AggregatedMetrics,
-    programInfo: Record<string, TradeDoublerProgramInfo>,
-  ): Promise<void> {
-    try {
-      const response = await axios.get(
-        `${this.baseUrl}/advertiser/report/prepaymentbalance`,
-        {
-          headers: await this.getAuthHeader(),
-          params: {
-            fromDate,
-            toDate,
-            programId: Number(this.config.organizationId),
-            reportCurrencyCode: 'EUR',
-            limit: 100,
-            offset: 0,
-          },
-        },
-      );
-
-      console.log(`Prepayment balance response:`, response.data);
-      const items = response.data?.items || [];
-      if (!Array.isArray(items)) return;
-
-      items.forEach((row) => {
-        const country = this.getProgramCountry(row.programId, programInfo);
-        const key = this.createMetricKey(
-          row.date,
-          row.programId,
-          row.programId,
-          country,
-        );
-
-        metrics[key] = metrics[key] || {};
-        metrics[key].date = row.date;
-        metrics[key].programId = String(row.programId);
-        metrics[key].campaignName = row.programName;
-        metrics[key].country = country;
-        metrics[key].currency = row.reportCurrencyCode || 'EUR';
-        metrics[key].currencyCode = row.reportCurrencyCode || 'EUR';
-        metrics[key].totalCommission =
-          (metrics[key].totalCommission || 0) + (Number(row.amount) || 0);
-      });
-    } catch (error) {
-      if (error.response) {
-        console.warn(
-          `Failed to fetch prepayment balance: ${error.response.status} - ${JSON.stringify(error.response.data)}`,
-        );
-      } else {
-        console.warn('Failed to fetch prepayment balance:', error.message);
-      }
     }
   }
 
@@ -431,12 +375,12 @@ export class TradeDoublerServiceAdapter {
           (metrics[key].vatAmount || 0) + (Number(row.vatAmount) || 0);
       });
     } catch (error) {
-      if (error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         console.warn(
           `Failed to fetch transactions: ${error.response.status} - ${JSON.stringify(error.response.data)}`,
         );
       } else {
-        console.warn('Failed to fetch transactions:', error.message);
+        console.log('Failed to fetch transactions:', error);
       }
     }
   }
@@ -494,12 +438,12 @@ export class TradeDoublerServiceAdapter {
           (metrics[key].clicks || 0) + (Number(row.clicks) || 0);
       });
     } catch (error) {
-      if (error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         console.warn(
           `Failed to fetch statistics: ${error.response.status} - ${JSON.stringify(error.response.data)}`,
         );
       } else {
-        console.warn('Failed to fetch statistics:', error.message);
+        console.warn('Failed to fetch statistics:', error);
       }
     }
   }
@@ -515,7 +459,7 @@ export class TradeDoublerServiceAdapter {
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
       );
     } catch (error) {
-      throw new Error(`Failed to merge TradeDoubler metrics: ${error.message}`);
+      throw new Error(`Failed to merge TradeDoubler metrics: ${error}`);
     }
   }
 }

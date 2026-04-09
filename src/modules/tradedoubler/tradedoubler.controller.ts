@@ -14,7 +14,6 @@ import { reply } from '../../app/utils/reply';
 import { TradeDoublerJobsService } from './tradedoubler.service';
 import {
   CreateTradeDoublerJobDto,
-  FetchTradeDoublerDataDto,
   LoginTradeDoublerDto,
 } from './tradedoubler.dto';
 
@@ -73,17 +72,22 @@ export class TradeDoublerController {
       return reply({
         res,
         results: {
-          accessToken: response.data.access_token,
+          //accessToken: response.data.access_token,
           id: setupResult?.providerProfile?.id ?? null,
           user_id: setupResult?.user?.id ?? null,
           message:
             'Login successful. User resolved/created, token saved, advertiser account fetched, provider profile updated.',
         },
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      const axiosError = error as {
+        response?: { data?: { error_description?: string } };
+        message?: string;
+      };
+
       throw new HttpException(
-        error.response?.data?.error_description ||
-          error.message ||
+        axiosError.response?.data?.error_description ||
+          axiosError.message ||
           'Failed to authenticate with TradeDoubler',
         HttpStatus.UNAUTHORIZED,
       );
@@ -121,10 +125,13 @@ export class TradeDoublerController {
           data,
         },
       });
-    } catch (error) {
+    } catch (error: unknown) {
       throw new HttpException(
-        error.message || 'Failed to fetch TradeDoubler job status',
-        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to fetch TradeDoubler job status',
+        error instanceof Object && 'status' in error
+          ? (error as any).status
+          : HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -160,57 +167,21 @@ export class TradeDoublerController {
           data,
         },
       });
-    } catch (error) {
+    } catch (error: unknown) {
       throw new HttpException(
-        error.message || 'Failed to fetch TradeDoubler job data',
-        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /** Get TradeDoubler advertiser account */
-  @Get(`/advertiser/account`)
-  async get_Advertiser_Account(
-    @Res() res,
-    @Headers('authorization') authorization: string,
-    @Query('userId') userId?: string,
-  ) {
-    try {
-      const result = await this.jobsService.fetchAdvertiserAccount(
-        userId,
-        authorization,
-      );
-
-      return reply({
-        res,
-        results: {
-          message: 'TradeDoubler advertiser account fetched successfully',
-          data: result,
-        },
-      });
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to fetch TradeDoubler advertiser account',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to fetch TradeDoubler job data',
+        error instanceof Object && 'status' in error
+          ? (error as any).status
+          : HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   /** Get TradeDoubler provider profile by userId */
   @Get(`/users/profiles`)
-  async get_Tradedoubler_Profile(
-    @Res() res,
-    @Headers('authorization') authorization: string,
-    @Query('userId') userId: string,
-  ) {
+  async get_Tradedoubler_Profile(@Res() res, @Query('userId') userId: string) {
     try {
-      if (!authorization || !authorization.startsWith('Bearer ')) {
-        throw new HttpException(
-          'Missing or invalid Authorization header. Use Bearer <accessToken> format',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-
       if (!userId) {
         throw new HttpException(
           'Missing required query param: userId',
@@ -228,177 +199,40 @@ export class TradeDoublerController {
           data: profile,
         },
       });
-    } catch (error) {
+    } catch (error: unknown) {
       throw new HttpException(
-        error.message || 'Failed to fetch TradeDoubler provider profile',
-        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /** Get TradeDoubler statistics report */
-  @Get(`/report/statistics`)
-  async get_Statistics_Report(
-    @Res() res,
-    @Headers('authorization') authorization: string,
-    @Query('dateFrom') dateFrom: string,
-    @Query('dateTo') dateTo: string,
-    @Query('userId') userId?: string,
-  ) {
-    try {
-      if (!authorization || !authorization.startsWith('Bearer ')) {
-        throw new HttpException(
-          'Missing or invalid Authorization header. Use Bearer <accessToken> format',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-
-      if (!dateFrom || !dateTo) {
-        throw new HttpException(
-          'Missing required query params: dateFrom, dateTo',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      const data = await this.jobsService.fetchStatisticsReport(
-        dateFrom,
-        dateTo,
-        userId,
-        authorization,
-      );
-
-      return reply({
-        res,
-        results: {
-          message: 'TradeDoubler statistics report fetched successfully',
-          data,
-        },
-      });
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to fetch TradeDoubler statistics report',
-        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /** Get TradeDoubler transactions report */
-  @Get(`/report/transactions`)
-  async get_Transactions_Report(
-    @Res() res,
-    @Headers('authorization') authorization: string,
-    @Query('dateFrom') dateFrom: string,
-    @Query('dateTo') dateTo: string,
-    @Query('userId') userId?: string,
-  ) {
-    try {
-      if (!authorization || !authorization.startsWith('Bearer ')) {
-        throw new HttpException(
-          'Missing or invalid Authorization header. Use Bearer <accessToken> format',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-
-      if (!dateFrom || !dateTo) {
-        throw new HttpException(
-          'Missing required query params: dateFrom, dateTo',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      const data = await this.jobsService.fetchTransactionsReport(
-        dateFrom,
-        dateTo,
-        userId,
-        authorization,
-      );
-
-      return reply({
-        res,
-        results: {
-          message: 'TradeDoubler transactions report fetched successfully',
-          data,
-        },
-      });
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to fetch TradeDoubler transactions report',
-        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /** Fetch TradeDoubler data and save to database */
-  @Post(`/jobs/request`)
-  async request_TradeDoubler_Job(
-    @Res() res,
-    @Headers('authorization') authorization: string,
-    @Body() body: CreateTradeDoublerJobDto,
-  ) {
-    try {
-      if (!authorization || !authorization.startsWith('Bearer ')) {
-        throw new HttpException(
-          'Missing or invalid Authorization header. Use Bearer <accessToken> format',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-
-      const result = await this.jobsService.createAndRunTradeDoublerJob(
-        body,
-        authorization,
-      );
-
-      return reply({
-        res,
-        results: {
-          message: 'TradeDoubler job executed successfully',
-          data: result,
-        },
-      });
-    } catch (error) {
-      throw new HttpException(
-        error.message || 'Failed to execute TradeDoubler job',
-        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to fetch TradeDoubler provider profile',
+        error instanceof Object && 'status' in error
+          ? (error as any).status
+          : HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   /** Fetch TradeDoubler data and save to database */
   @Post(`/jobs/create`)
-  async fetch_TradeDoubler_Data(
+  async tradeDoubler_Job_Create(
     @Res() res,
-    @Headers('authorization') authorization: string,
-    @Body() body: FetchTradeDoublerDataDto,
+    @Body() body: CreateTradeDoublerJobDto,
   ) {
     try {
-      const { dateFrom, dateTo, userId } = body;
-
-      // Validate required fields
-      if (!dateFrom || !dateTo) {
-        throw new HttpException(
-          'Missing required fields: dateFrom, dateTo',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      const result = await this.jobsService.fetchAndSaveTradeDoublerData(
-        dateFrom,
-        dateTo,
-        userId,
-        authorization,
-      );
+      const result = await this.jobsService.createAndRunTradeDoublerJob(body);
 
       return reply({
         res,
         results: {
-          message: 'TradeDoubler data fetched and saved successfully',
+          message: 'TradeDoubler job queued successfully',
           data: result,
         },
       });
-    } catch (error) {
+    } catch (error: unknown) {
       throw new HttpException(
-        error.message || 'Failed to fetch TradeDoubler data',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to execute TradeDoubler job',
+        error instanceof Object && 'status' in error
+          ? (error as any).status
+          : HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }

@@ -1,4 +1,4 @@
-import { Job, Prisma } from '../../app/database/prisma';
+import { Prisma, RTBHouseReport } from '../../app/database/prisma';
 import { PrismaPagination } from '../../app/utils/pagination';
 
 export type GetJobSelections = {
@@ -7,15 +7,15 @@ export type GetJobSelections = {
 };
 
 export type GetOneJobSelections = {
-  jobId?: Job['id'];
+  jobId?: RTBHouseReport['id'];
 };
 
 export type UpdateJobSelections = {
-  jobId: Job['id'];
+  jobId: RTBHouseReport['id'];
 };
 
-export type CreateJobOptions = Prisma.JobCreateInput;
-export type UpdateJobOptions = Prisma.JobUpdateInput;
+export type CreateJobOptions = Prisma.RTBHouseReportCreateInput;
+export type UpdateJobOptions = Prisma.RTBHouseReportUpdateInput;
 
 export const JobSelect = {
   createdAt: true,

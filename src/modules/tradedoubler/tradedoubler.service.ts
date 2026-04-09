@@ -13,21 +13,6 @@ import {
 
 @Injectable()
 export class TradeDoublerJobsService {
-  private mapTradeDoublerJobStatus(status?: string): number {
-    switch ((status || '').toUpperCase()) {
-      case 'PENDING':
-        return 0;
-      case 'RUNNING':
-        return 1;
-      case 'COMPLETED':
-        return 2;
-      case 'FAILED':
-        return -1;
-      default:
-        return 0;
-    }
-  }
-
   private extractAccessToken(authorization?: string): string | undefined {
     if (!authorization) return undefined;
     return authorization.replace(/^Bearer\s+/i, '').trim();
@@ -47,7 +32,7 @@ export class TradeDoublerJobsService {
   }
 
   async findAllByJobId(jobId: string) {
-    const job = await this.client.tradeDoublerJob.findUnique({
+    const job = await this.client.providerJob.findUnique({
       where: { id: jobId },
     });
 
@@ -65,15 +50,14 @@ export class TradeDoublerJobsService {
 
     return {
       job_Id: job.id,
-      status: this.mapTradeDoublerJobStatus(job.status),
-      rawStatus: job.status,
+      status: job.status,
       rowsCount: job.rowsCount,
       data: reports,
     };
   }
 
   async getJobStatus(jobId: string) {
-    const job = await this.client.tradeDoublerJob.findUnique({
+    const job = await this.client.providerJob.findUnique({
       where: { id: jobId },
     });
 
@@ -86,11 +70,7 @@ export class TradeDoublerJobsService {
 
     return {
       job_Id: job.id,
-      status: this.mapTradeDoublerJobStatus(job.status),
-      rawStatus: job.status,
-      rowsCount: job.rowsCount,
-      completedAt: job.completedAt,
-      errorMessage: job.errorMessage,
+      status: job.status,
     };
   }
 
@@ -254,19 +234,6 @@ export class TradeDoublerJobsService {
     );
 
     return { user, account, providerProfile };
-  }
-
-  async fetchAdvertiserAccount(userId?: string, authorization?: string) {
-    const accessToken = await this.resolveAccessToken(userId, authorization);
-
-    if (!accessToken) {
-      throw new HttpException(
-        'Missing Authorization header. Use Bearer <accessToken> or provide a userId with stored token.',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
-    return this.fetchAndParseAdvertiserAccount(accessToken);
   }
 
   async getTradedoublerProfileByUserId(userId: string) {
@@ -559,10 +526,34 @@ export class TradeDoublerJobsService {
       userId,
     } = body;
 
-    const job = await this.client.tradeDoublerJob.create({
+    const accessToken = await this.resolveAccessToken(userId, authorization);
+
+    if (!accessToken) {
+      throw new HttpException(
+        'Missing Authorization header. Use Bearer <accessToken> or provide a userId with stored token.',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    // Ensure the worker can always resolve a fresh access token from storage.
+    const storedToken = await this.integrationTokenService.getToken(
+      userId,
+      'tradedoubler',
+    );
+
+    await this.integrationTokenService.saveToken(userId, 'tradedoubler', {
+      accessToken,
+      refreshToken: storedToken?.refreshToken,
+      expiresAt: storedToken?.expiresAt ?? undefined,
+      scope: storedToken?.scope ?? undefined,
+      metadata: storedToken?.metadata,
+    });
+
+    const job = await this.client.providerJob.create({
       data: {
         user: { connect: { id: userId } },
-        status: 'PENDING',
+        provider: 'tradedoubler',
+        status: 0,
         fromDate: new Date(fromDate),
         toDate: new Date(toDate),
         reportCurrencyCode,
@@ -571,93 +562,6 @@ export class TradeDoublerJobsService {
       },
     });
 
-    try {
-      await this.client.tradeDoublerJob.update({
-        where: { id: job.id },
-        data: { status: 'RUNNING' },
-      });
-
-      const accessToken = await this.resolveAccessToken(userId, authorization);
-
-      if (!accessToken) {
-        throw new HttpException(
-          'Missing Authorization header. Use Bearer <accessToken> or provide a userId with stored token.',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-
-      const tradeDoublerService = new TradeDoublerServiceAdapter({
-        secret: process.env.TRADEDOUBLER_SECRET,
-        clientId: process.env.TRADEDOUBLER_CLIENT_ID,
-        username: process.env.TRADEDOUBLER_USERNAME,
-        password: process.env.TRADEDOUBLER_PASSWORD,
-        accessToken,
-        organizationId:
-          process.env.TRADEDOUBLER_ORGANIZATION_ID ||
-          this.getRequiredEnv('TRADEDOUBLER_CLIENT_ID'),
-        baseUrl:
-          process.env.TRADEDOUBLER_BASE_URL ||
-          'https://connect.tradedoubler.com',
-      });
-
-      const mergedData =
-        await tradeDoublerService.fetchStatisticsAndTransactions(
-          fromDate,
-          toDate,
-          reportCurrencyCode,
-          reportType,
-          intervalType,
-        );
-
-      for (const data of mergedData) {
-        const reportData: CreateTradeDoublerOptions = {
-          user: { connect: { id: userId } },
-          job: { connect: { id: job.id } },
-          date: new Date(data.date),
-          organizationName: data.organizationName,
-          organizationId: data.organizationId,
-          campaignName: data.campaignName,
-          programId: data.programId,
-          currency: data.currency,
-          country: data.country,
-          publisherCommission: data.publisherCommission,
-          orderValue: data.orderValue,
-          totalCommission: data.totalCommission,
-          vatAmount: data.vatAmount,
-          impressions: data.impressions,
-          clicks: data.clicks,
-          currencyCode: data.currencyCode,
-        };
-
-        await this.createOne(reportData);
-      }
-
-      await this.client.tradeDoublerJob.update({
-        where: { id: job.id },
-        data: {
-          status: 'COMPLETED',
-          completedAt: new Date(),
-          rowsCount: mergedData.length,
-        },
-      });
-
-      return {
-        job_Id: job.id,
-        status: 2,
-        rawStatus: 'COMPLETED',
-        rowsCount: mergedData.length,
-      };
-    } catch (error) {
-      await this.client.tradeDoublerJob.update({
-        where: { id: job.id },
-        data: {
-          status: 'FAILED',
-          completedAt: new Date(),
-          errorMessage: error.message || 'Unknown error',
-        },
-      });
-
-      throw error;
-    }
+    return { job_Id: job.id };
   }
 }
