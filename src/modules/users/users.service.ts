@@ -35,11 +35,7 @@ export class UsersService {
 
     if (search) {
       where.AND.push({
-        OR: [
-          { email: { contains: search, mode: 'insensitive' } },
-          { profile: { firstName: { contains: search, mode: 'insensitive' } } },
-          { profile: { lastName: { contains: search, mode: 'insensitive' } } },
-        ],
+        OR: [{ email: { contains: search, mode: 'insensitive' } }],
       });
     }
 
@@ -84,7 +80,6 @@ export class UsersService {
         password: true,
         name: true,
         confirmedAt: true,
-        profile: true,
       },
     });
 

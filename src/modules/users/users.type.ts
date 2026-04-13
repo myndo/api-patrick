@@ -54,25 +54,6 @@ export const UserSelect = {
   member: true,
   isSubscribed: true,
   confirmedAt: true,
-  profile: {
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      profession: true,
-      address: true,
-      phone: true,
-      photo: true,
-      countryName: true,
-      description: true,
-      currency: {
-        select: {
-          name: true,
-          symbol: true,
-        },
-      },
-    },
-  },
   _count: {
     select: {
       assignTypes: true,

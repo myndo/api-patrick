@@ -115,6 +115,66 @@ export class RTBHouseServiceAdapter {
     return response.data.data;
   }
 
+  async fetchAdvertiserHashes(): Promise<string[]> {
+    const url = `${this.config.baseUrl}/advertisers?fields=hash`;
+
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: await this.getAuthHeaderAsync(),
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const rows = Array.isArray(response.data?.data) ? response.data.data : [];
+    return rows
+      .map((item: Record<string, any>) => item?.hash)
+      .filter(
+        (hash: unknown): hash is string =>
+          typeof hash === 'string' && hash.trim().length > 0,
+      );
+  }
+
+  async fetchClientInfo(advertiserId: string): Promise<Record<string, any>> {
+    const url = `${this.config.baseUrl}/advertisers/${advertiserId}/client`;
+
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: await this.getAuthHeaderAsync(),
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return response.data || {};
+  }
+
+  async fetchAdvertiserInfo(
+    advertiserId: string,
+  ): Promise<Record<string, any>> {
+    const url = `${this.config.baseUrl}/advertisers/${advertiserId}`;
+
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: await this.getAuthHeaderAsync(),
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return response.data || {};
+  }
+
+  async fetchUserInfo(): Promise<Record<string, any>> {
+    const url = `${this.config.baseUrl}/user/info`;
+
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: await this.getAuthHeaderAsync(),
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return response.data || {};
+  }
+
   async fetchMetric(
     metric: string,
     dayFrom: string,

@@ -7,9 +7,6 @@
  *   pm2 start ecosystem.config.js --only tradedoubler-worker  → start worker only
  *   pm2 logs tradedoubler-worker            → tail worker logs
  *
- * TradeDoubler worker runs:
- *   • Immediately when spawned on-demand by /jobs/create
- *   • Continuously, checking every second for PENDING jobs
  */
 module.exports = {
   apps: [
@@ -33,6 +30,18 @@ module.exports = {
         NODE_ENV: 'production',
         TD_WORKER_ENABLED: 'true',
         TD_WORKER_POLL_MS: 1000,
+      },
+    },
+    {
+      name: 'rtbhouse-worker',
+      script: 'dist/src/workers/rtbhouse-job.worker.js',
+      autorestart: false,
+      watch: false,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+        RTB_WORKER_ENABLED: 'true',
+        RTB_WORKER_POLL_MS: 1000,
       },
     },
   ],

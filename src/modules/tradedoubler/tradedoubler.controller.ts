@@ -72,7 +72,6 @@ export class TradeDoublerController {
       return reply({
         res,
         results: {
-          //accessToken: response.data.access_token,
           id: setupResult?.providerProfile?.id ?? null,
           user_id: setupResult?.user?.id ?? null,
           message:

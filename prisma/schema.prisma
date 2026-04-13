@@ -22,7 +22,6 @@ model User {
   provider           String?
   name               String?
   confirmedAt        DateTime?
-  profile            Profile?
   integrationTokens  IntegrationToken[]
   providerProfiles   ProviderProfile[]
   tradeDoublerReports TradeDoublerReport[]
@@ -68,23 +67,6 @@ model IntegrationToken {
   @@unique([userId, provider])
   @@index([userId])
   @@index([provider])
-}
-
-model Profile {
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-  id          String    @id @default(uuid())
-  firstName   String
-  lastName    String
-  address     String?
-  phone       String?
-  description String?   @db.Text
-  city        String?
-  currency    String?
-  country     String?
-  userId      String    @unique
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ProviderProfile {

@@ -52,4 +52,5 @@ export type CreateJobFromRTBHouseOptions = {
   campaignCost: number;
   userSegment: string;
   provider: string;
+  providerJobId?: string;
 };

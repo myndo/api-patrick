@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { DatabaseModule } from './app/database/database.module';
-import { ProfilesModule } from './modules/profiles/profiles.module';
 import { UsersModule } from './modules/users/users.module';
 import { RtbHouseModule } from './modules/rtb_house/rtb_house.module';
 import { ShopifyModule } from './modules/shopify/shopify.module';
@@ -15,7 +14,6 @@ import { Dv360Module } from './modules/dv360/dv360.module';
   imports: [
     ScheduleModule.forRoot(),
     DatabaseModule,
-    ProfilesModule,
     UsersModule,
     RtbHouseModule,
     ShopifyModule,

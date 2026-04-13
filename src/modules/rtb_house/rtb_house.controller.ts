@@ -35,6 +35,7 @@ export class RtbHouseController {
     );
   }
 
+  /// Verify the token issued by our platform and extract RTB House credentials
   private verifyRtbHousePlatformToken(token: string): {
     username: string;
     password: string;
@@ -69,51 +70,40 @@ export class RtbHouseController {
     authHeader?: string,
     userId?: string,
   ): Promise<{ username: string; password: string }> {
+    if (userId) {
+      const stored = await this.integrationTokenService.getToken(
+        userId,
+        'rtbhouse',
+      );
+
+      if (stored && !stored.isExpired) {
+        if (stored.metadata?.username && stored.metadata?.password) {
+          return {
+            username: stored.metadata.username,
+            password: stored.metadata.password,
+          };
+        }
+
+        return this.verifyRtbHousePlatformToken(stored.accessToken);
+      }
+    }
+
     if (authHeader?.startsWith('Bearer ')) {
       const accessToken = authHeader.slice(7);
       return this.verifyRtbHousePlatformToken(accessToken);
     }
 
-    if (!userId) {
-      throw new HttpException(
-        'Missing Authorization header. Use Bearer <accessToken> or provide userId with stored RTB House credentials.',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
-    const stored = await this.integrationTokenService.getToken(
-      userId,
-      'rtbhouse',
+    throw new HttpException(
+      'Missing valid RTB House credentials. Provide userId with stored credentials or Authorization: Bearer <accessToken>.',
+      HttpStatus.UNAUTHORIZED,
     );
-    if (!stored) {
-      throw new HttpException(
-        `No stored RTB House credentials found for userId=${userId}. Login first using /rtbhouse/auth/login.`,
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
-    if (stored.isExpired) {
-      throw new HttpException(
-        'Stored RTB House credentials expired. Please login again.',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
-    if (stored.metadata?.username && stored.metadata?.password) {
-      return {
-        username: stored.metadata.username,
-        password: stored.metadata.password,
-      };
-    }
-
-    return this.verifyRtbHousePlatformToken(stored.accessToken);
   }
 
   /** Login with username/password to get local platform authorization token */
-  @Post(`/auth/login`)
+  @Post(`/users/register`)
   async login(@Res() res, @Body() body: LoginRTBHouseDto) {
     try {
-      const { username, password, userId } = body;
+      const { username, password } = body;
 
       if (!username || !password) {
         throw new HttpException(
@@ -123,24 +113,19 @@ export class RtbHouseController {
       }
 
       const accessToken = this.createRtbHousePlatformToken(username, password);
-
-      if (userId) {
-        await this.integrationTokenService.saveToken(userId, 'rtbhouse', {
-          accessToken,
-          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          metadata: {
-            username,
-            password,
-          },
-        });
-      }
+      const setupResult = await this.jobsService.loginAndSetup(
+        username,
+        password,
+        accessToken,
+      );
 
       return reply({
         res,
         results: {
-          accessToken,
+          user_id: setupResult.user.id,
+          id: setupResult.providerProfile.id,
           message:
-            'Login successful. Use this token in Authorization header: Bearer <accessToken>',
+            'Login successful. Advertiser client info fetched, user/provider profile saved, and credentials stored in IntegrationToken.',
         },
       });
     } catch (error: unknown) {
@@ -152,31 +137,101 @@ export class RtbHouseController {
     }
   }
 
-  /** Get all jobs */
+  /** Get TradeDoubler job status by jobId */
+  @Get(`/jobs/status`)
+  async get_Job_Status(@Res() res, @Query('job_Id') jobId: string) {
+    try {
+      if (!jobId) {
+        throw new HttpException(
+          'Missing required query param: jobId',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const data = await this.jobsService.getJobStatus(jobId);
+
+      return reply({
+        res,
+        results: {
+          message: 'TradeDoubler job status fetched successfully',
+          data,
+        },
+      });
+    } catch (error: unknown) {
+      throw new HttpException(
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to fetch TradeDoubler job status',
+        error instanceof Object && 'status' in error
+          ? (error as any).status
+          : HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /** Get RTBHouse saved data by jobId */
   @Get(`/jobs/data`)
   async find_All(
     @Res() res,
     @Headers('authorization') authHeader: string,
+    @Query('job_Id') jobId: string,
     @Query('userId') userId?: string,
   ) {
     try {
+      if (!jobId) {
+        throw new HttpException(
+          'Missing required query param: jobId',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
       await this.resolveCredentials(authHeader, userId);
 
-      const jobs = await this.jobsService.findAll();
+      const jobs = await this.jobsService.findAllByJobId(jobId);
 
       return reply({
         res,
         results: {
           data: jobs,
           status: HttpStatus.OK,
-          message: `RTBHouse data fetched successfully`,
+          message: `RTBHouse job data fetched successfully`,
         },
       });
     } catch (error: unknown) {
       throw new HttpException(
         (error instanceof Error ? error.message : String(error)) ||
-          'Failed to fetch RTBHouse data',
+          'Failed to fetch RTBHouse job data',
         HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /** Get RTBHouse provider profile by userId */
+  @Get(`/users/profiles`)
+  async get_RtbHouse_Profile(@Res() res, @Query('userId') userId: string) {
+    try {
+      if (!userId) {
+        throw new HttpException(
+          'Missing required query param: userId',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const profile = await this.jobsService.getRtbHouseProfileByUserId(userId);
+
+      return reply({
+        res,
+        results: {
+          message: 'RTBHouse provider profile fetched successfully',
+          data: profile,
+        },
+      });
+    } catch (error: unknown) {
+      throw new HttpException(
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to fetch RTBHouse provider profile',
+        error instanceof Object && 'status' in error
+          ? (error as any).status
+          : HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -185,39 +240,35 @@ export class RtbHouseController {
   @Post(`/jobs/create`)
   async fetch_RTBHouse_Data(
     @Res() res,
-    @Headers('authorization') authHeader: string,
+    @Headers('authorization') authHeader: string | undefined,
     @Body() body: FetchRTBHouseDataDto,
   ) {
     try {
-      const { dayFrom, dayTo, advertiserId, userId } = body;
+      const { dayFrom, dayTo, userId } = body;
 
       // Validate required fields
-      if (!dayFrom || !dayTo || !advertiserId) {
+      if (!dayFrom || !dayTo || !userId) {
         throw new HttpException(
-          'Missing required fields: dayFrom, dayTo, advertiserId',
+          'Missing required fields: dayFrom, dayTo, userId',
           HttpStatus.BAD_REQUEST,
         );
       }
 
-      const { username, password } = await this.resolveCredentials(
-        authHeader,
-        userId,
-      );
-
-      await this.jobsService.fetchAndSaveRTBHouseData(dayFrom, dayTo, {
-        baseUrl: 'https://api.panel.rtbhouse.com/v5',
-        advertiserId,
-        username,
-        password,
-      });
+      await this.resolveCredentials(authHeader, userId);
+      const result = await this.jobsService.createAndQueueRTBHouseJob(body);
 
       return reply({
         res,
         results: {
-          message: 'RTBHouse data fetched and saved successfully',
+          message: 'RTBHouse job queued successfully',
+          data: result,
         },
       });
     } catch (error: unknown) {
+      // Preserve HttpException status codes
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(
         (error instanceof Error ? error.message : String(error)) ||
           'Failed to fetch RTBHouse data',
