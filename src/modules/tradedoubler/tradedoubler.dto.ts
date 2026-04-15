@@ -17,22 +17,6 @@ export class LoginTradeDoublerDto {
   @IsString()
   secret: string;
 }
-
-export class FetchTradeDoublerDataDto {
-  @IsNotEmpty()
-  @IsString()
-  dateFrom: string;
-
-  @IsNotEmpty()
-  @IsString()
-  dateTo: string;
-
-  /** Required to save reports per specific user */
-  @IsNotEmpty()
-  @IsString()
-  userId: string;
-}
-
 export class CreateTradeDoublerJobDto {
   @IsNotEmpty()
   @IsString()
@@ -48,7 +32,7 @@ export class CreateTradeDoublerJobDto {
 
   @IsNotEmpty()
   @IsString()
-  userId: string;
+  profileId: string;
 
   @IsString()
   reportType?: string;

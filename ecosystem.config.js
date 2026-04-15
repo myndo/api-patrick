@@ -44,5 +44,17 @@ module.exports = {
         RTB_WORKER_POLL_MS: 1000,
       },
     },
+    {
+      name: 'zemanta-worker',
+      script: 'dist/src/workers/zemanta-job.worker.js',
+      autorestart: false,
+      watch: false,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+        ZEMANTA_WORKER_ENABLED: 'true',
+        ZEMANTA_WORKER_POLL_MS: 1000,
+      },
+    },
   ],
 };

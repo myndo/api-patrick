@@ -1,17 +1,8 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../app/database/database.service';
-import { FilterGroup, Prisma } from '../../app/database/prisma';
 import { IntegrationTokenService } from '../integrations/integration-token.service';
 import { RTBHouseServiceAdapter } from '../integrations/rtbhouse-service-adapter';
 import { FetchRTBHouseDataDto } from './rtb_house.dto';
-import {
-  CreateJobOptions,
-  CreateJobFromRTBHouseOptions,
-  GetOneJobSelections,
-  JobSelect,
-  UpdateJobOptions,
-  UpdateJobSelections,
-} from './rtb_house.type';
 
 @Injectable()
 export class JobsService {
@@ -124,40 +115,43 @@ export class JobsService {
       'homepage',
     ]);
 
-    return this.client.providerProfile.upsert({
-      where: {
-        userId_provider: {
-          userId,
-          provider: 'rtbhouse',
-        },
-      },
-      create: {
+    const data = {
+      providerAccountId,
+      displayName,
+      email,
+      username,
+      phone,
+      address,
+      city,
+      country,
+      currency,
+      websiteUrl: websiteUrl || null,
+      // rawData: JSON.stringify(flattened),
+    };
+
+    const existing = providerAccountId
+      ? await this.client.providerProfile.findFirst({
+          where: {
+            userId,
+            provider: 'rtbhouse',
+            providerAccountId,
+            deletedAt: null,
+          },
+        })
+      : null;
+
+    if (existing) {
+      return this.client.providerProfile.update({
+        where: { id: existing.id },
+        data,
+      });
+    }
+
+    return this.client.providerProfile.create({
+      data: {
         user: { connect: { id: userId } },
         provider: 'rtbhouse',
-        providerAccountId,
-        displayName,
-        email,
-        username,
-        phone,
-        address,
-        city,
-        country,
-        currency,
-        websiteUrl: websiteUrl || null,
-        // rawData: JSON.stringify(flattened),
-      },
-      update: {
-        providerAccountId,
-        displayName,
-        email,
-        username,
-        phone,
-        address,
-        city,
-        country,
-        currency,
-        websiteUrl: websiteUrl || null,
-        // rawData: JSON.stringify(flattened),
+        ...data,
       },
     });
   }
@@ -205,69 +199,28 @@ export class JobsService {
       flattened,
     );
 
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    await this.integrationTokenService.saveToken(user.id, 'rtbhouse', {
-      accessToken,
-      expiresAt,
-      scope: 'platform-auth',
-      metadata: {
-        username,
-        password,
-      },
-    });
-
     const providerProfile = await this.saveUserInfoToProviderProfile(
       user.id,
       flattened,
     );
 
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await this.integrationTokenService.saveToken(
+      user.id,
+      'rtbhouse',
+      {
+        accessToken,
+        expiresAt,
+        scope: 'platform-auth',
+        metadata: {
+          username,
+          password,
+        },
+      },
+      providerProfile.id,
+    );
+
     return { user, userInfo: flattened, providerProfile };
-  }
-
-  async findAll() {
-    const where: FilterGroup<Prisma.RTBHouseReportWhereInput> = {
-      deletedAt: null,
-      AND: [],
-    };
-
-    const jobs = await this.client.rTBHouseReport.findMany({ where });
-
-    return jobs;
-  }
-
-  /** Find one Job in database. */
-  async findOneBy(selections: GetOneJobSelections) {
-    const where: FilterGroup<Prisma.RTBHouseReportWhereInput> = {
-      deletedAt: null,
-      AND: [],
-    };
-    const { jobId } = selections;
-
-    if (jobId) {
-      where.AND.push({ id: jobId });
-    }
-
-    const organization = await this.client.rTBHouseReport.findFirst({
-      where,
-      select: JobSelect,
-    });
-
-    return organization;
-  }
-
-  /** Create one Job in database. */
-  async createOne(options: CreateJobOptions) {
-    return await this.client.rTBHouseReport.create({
-      data: options,
-    });
-  }
-
-  /** Update one Job in database. */
-  async updateOne({ jobId }: UpdateJobSelections, options: UpdateJobOptions) {
-    return await this.client.rTBHouseReport.update({
-      where: { id: jobId },
-      data: options,
-    });
   }
 
   async getJobStatus(jobId: string) {
@@ -286,6 +239,18 @@ export class JobsService {
       job_Id: job.id,
       status: job.status,
     };
+  }
+
+  async findOneBy(selections: { jobId?: string }) {
+    const { jobId } = selections;
+
+    if (!jobId) {
+      return null;
+    }
+
+    return this.client.rTBHouseReport.findFirst({
+      where: { id: jobId, deletedAt: null },
+    });
   }
 
   async findAllByJobId(jobId: string) {
@@ -335,72 +300,32 @@ export class JobsService {
     return profile;
   }
 
-  /** Fetch and save RTBHouse data */
-  async fetchAndSaveRTBHouseData(
-    dayFrom: string,
-    dayTo: string,
-    config: {
-      baseUrl: string;
-      advertiserId: string;
-      username?: string;
-      password?: string;
-      refreshToken?: string;
-      providerJobId?: string;
-    },
-  ) {
-    const rtbHouseService = new RTBHouseServiceAdapter(config);
-
-    // Fetch merged data from RTBHouse
-    const mergedData = await rtbHouseService.fetchAndMergeMetrics(
-      dayFrom,
-      dayTo,
-    );
-
-    const savedJobs = [];
-
-    // Save each record to the database
-    for (const data of mergedData) {
-      const jobData: CreateJobFromRTBHouseOptions = {
-        day: new Date(data.day),
-        campaign: data.campaign,
-        status: data.status,
-        clicksCount: data.clicksCount || 0,
-        conversionsCount: data.conversionsCount || 0,
-        clientName: data.client_name,
-        conversionsValue: data.conversionsValue || 0,
-        country: data.country,
-        currency: data.currency,
-        impsCount: data.impsCount || 0,
-        campaignCost: data.campaignCost || 0,
-        userSegment: data.userSegment,
-        provider: 'RTBHouse',
-        providerJobId: config.providerJobId,
-      };
-
-      const savedJob = await this.createOne(jobData);
-      savedJobs.push(savedJob);
-    }
-
-    return {
-      totalRecords: savedJobs.length,
-      jobs: savedJobs,
-    };
-  }
-
   async createAndQueueRTBHouseJob(body: FetchRTBHouseDataDto) {
-    const { dayFrom, dayTo, userId } = body;
+    const { dayFrom, dayTo, profileId } = body;
 
-    if (!userId) {
+    const profile = await this.client.providerProfile.findUnique({
+      where: { id: profileId },
+      select: {
+        id: true,
+        userId: true,
+        provider: true,
+      },
+    });
+
+    if (!profile || profile.provider !== 'rtbhouse') {
       throw new HttpException(
-        'Missing required field: userId',
-        HttpStatus.BAD_REQUEST,
+        `No rtbhouse profile found for profileId=${profileId}`,
+        HttpStatus.NOT_FOUND,
       );
     }
+
+    const userId = profile.userId;
 
     // Get stored RTB House credentials
     const stored = await this.integrationTokenService.getToken(
       userId,
       'rtbhouse',
+      profileId,
     );
     if (!stored || stored.isExpired) {
       throw new HttpException(
@@ -453,6 +378,7 @@ export class JobsService {
     const job = await this.client.providerJob.create({
       data: {
         user: { connect: { id: userId } },
+        profile: { connect: { id: profileId } },
         provider: 'rtbhouse',
         status: 0,
         fromDate: new Date(dayFrom),

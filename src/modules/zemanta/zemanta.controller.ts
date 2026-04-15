@@ -2,30 +2,22 @@ import {
   Body,
   Controller,
   Get,
-  Headers,
+  HttpException,
+  HttpStatus,
   Post,
-  Param,
   Query,
   ValidationPipe,
   Res,
 } from '@nestjs/common';
 import { ZemantaService } from './zemanta.service';
-import {
-  GenerateAccessTokenDto,
-  ListAccountsDto,
-  ListCampaignsDto,
-} from './zemanta.dto';
+import { CreateZemantaJobDto, GenerateAccessTokenDto } from './zemanta.dto';
 import { reply } from '../../app/utils/reply';
 
 @Controller('zemanta')
 export class ZemantaController {
   constructor(private readonly zemantaService: ZemantaService) {}
 
-  /**
-   * Generate access token to pass as Authorization header
-   * POST /api/v1/zemanta/access-token
-   */
-  @Post('access-token')
+  @Post(`/users/register`)
   async generate_AccessToken(
     @Body(new ValidationPipe({ transform: true })) body: GenerateAccessTokenDto,
     @Res() res,
@@ -35,175 +27,116 @@ export class ZemantaController {
       res,
       results: {
         ...data,
-        message: 'Access token generated successfully',
+        message:
+          'Login successful. Access token generated, Zemanta accounts fetched, user/provider profile saved, and credentials stored in IntegrationToken.',
       },
     });
   }
 
-  /**
-   * Get all campaigns from database
-   * GET /api/v1/zemanta/find-all
-   * Query params (optional): statsFrom (YYYY-MM-DD), statsTo (YYYY-MM-DD)
-   */
-  @Get('find-all')
-  async find_All(
-    @Query('statsFrom') statsFrom?: string,
-    @Query('statsTo') statsTo?: string,
-    @Res() res?,
+  @Post(`/jobs/create`)
+  async create_Zemanta_Job(
+    @Body(new ValidationPipe({ transform: true })) body: CreateZemantaJobDto,
+    @Res() res,
   ) {
-    const data = await this.zemantaService.getAllCampaignsFromDatabase(
-      statsFrom,
-      statsTo,
-    );
+    const result = await this.zemantaService.createAndQueueZemantaJob(body);
+
     return reply({
       res,
       results: {
-        ...data,
-        message: 'Campaigns retrieved successfully from database',
+        message: 'Zemanta job queued successfully',
+        data: result,
       },
     });
   }
 
-  /**
-   * List all accounts
-   * GET /api/v1/zemanta/accounts
-   */
-  @Get('accounts')
-  async list_Accounts(
-    @Query(new ValidationPipe({ transform: true })) query: ListAccountsDto,
-    @Headers('authorization') authorization: string,
-    @Query('userId') userId?: string,
-    @Res() res?,
-  ) {
-    const data = await this.zemantaService.listAccounts(
-      query.includeArchived,
-      query.includeDeliveryStatus,
-      authorization,
-      userId,
-    );
-    return reply({
-      res,
-      results: {
-        ...data,
-        message: 'Accounts retrieved successfully',
-      },
-    });
-  }
+  @Get(`/jobs/status`)
+  async get_Job_Status(@Res() res, @Query('job_Id') jobId: string) {
+    try {
+      if (!jobId) {
+        throw new HttpException(
+          'Missing required query param: jobId',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
 
-  /**
-   * Get account details
-   * GET /api/v1/zemanta/accounts/:accountId
-   */
-  @Get('accounts/:accountId')
-  async get_AccountDetails(
-    @Param('accountId') accountId: string,
-    @Query('includeDeliveryStatus') includeDeliveryStatus: boolean,
-    @Headers('authorization') authorization: string,
-    @Query('userId') userId?: string,
-    @Res() res?,
-  ) {
-    const data = await this.zemantaService.getAccountDetails(
-      accountId,
-      includeDeliveryStatus,
-      authorization,
-      userId,
-    );
-    return reply({
-      res,
-      results: {
-        ...data,
-        message: 'Account details retrieved successfully',
-      },
-    });
-  }
+      const data = await this.zemantaService.getJobStatus(jobId);
 
-  /**
-   * List campaigns
-   * GET /api/v1/zemanta/campaigns
-   */
-  @Get('campaigns')
-  async list_Campaigns(
-    @Query(new ValidationPipe({ transform: true })) query: ListCampaignsDto,
-    @Headers('authorization') authorization: string,
-    @Query('userId') userId?: string,
-    @Res() res?,
-  ) {
-    const data = await this.zemantaService.listCampaigns(
-      query,
-      authorization,
-      userId,
-    );
-    return reply({
-      res,
-      results: {
-        ...data,
-        message: 'Campaigns retrieved successfully',
-      },
-    });
-  }
-
-  /**
-   * Get campaign details (budgets and optionally stats)
-   * GET /api/v1/zemanta/campaigns/:campaignId
-   * Query params: from (optional), to (optional) - if provided, includes stats
-   */
-  @Get('campaigns/:campaignId')
-  async get_CampaignDetails(
-    @Param('campaignId') campaignId: string,
-    @Query('from') from?: string,
-    @Query('to') to?: string,
-    @Headers('authorization') authorization?: string,
-    @Query('userId') userId?: string,
-    @Res() res?,
-  ) {
-    const result = await this.zemantaService.getCampaignDetails(
-      campaignId,
-      from,
-      to,
-      authorization,
-      userId,
-    );
-    return reply({
-      res,
-      results: {
-        ...result,
-        message: 'Campaign details retrieved successfully',
-      },
-    });
-  }
-
-  /**
-   * Sync all campaigns to database
-   * POST /api/v1/zemanta/sync-campaigns
-   * Query params: from (required), to (required) - date range for stats
-   */
-  @Post('sync-campaigns')
-  async sync_Campaigns(
-    @Query('from') from: string,
-    @Query('to') to: string,
-    @Headers('authorization') authorization: string,
-    @Query('userId') userId?: string,
-    @Res() res?,
-  ) {
-    if (!from || !to) {
       return reply({
         res,
         results: {
-          error:
-            'from and to query parameters are required (YYYY-MM-DD format)',
+          message: 'Zemanta job status fetched successfully',
+          data,
         },
       });
+    } catch (error: unknown) {
+      throw new HttpException(
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to fetch Zemanta job status',
+        error instanceof Object && 'status' in error
+          ? (error as any).status
+          : HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
+  }
 
-    const data = await this.zemantaService.syncCampaignsToDatabase(
-      from,
-      to,
-      authorization,
-      userId,
-    );
-    return reply({
-      res,
-      results: data,
-    });
+  @Get(`/jobs/data`)
+  async get_Job_Data(@Res() res, @Query('job_Id') jobId: string) {
+    try {
+      if (!jobId) {
+        throw new HttpException(
+          'Missing required query param: jobId',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const data = await this.zemantaService.findAllByJobId(jobId);
+
+      return reply({
+        res,
+        results: {
+          message: 'Zemanta job data fetched successfully',
+          data,
+        },
+      });
+    } catch (error: unknown) {
+      throw new HttpException(
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to fetch Zemanta job data',
+        error instanceof Object && 'status' in error
+          ? (error as any).status
+          : HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get(`/users/profiles`)
+  async get_Zemanta_Profiles(@Res() res, @Query('userId') userId: string) {
+    try {
+      if (!userId) {
+        throw new HttpException(
+          'Missing required query param: userId',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const profiles =
+        await this.zemantaService.getZemantaProfilesByUserId(userId);
+
+      return reply({
+        res,
+        results: {
+          message: 'Zemanta provider profiles fetched successfully',
+          data: profiles,
+        },
+      });
+    } catch (error: unknown) {
+      throw new HttpException(
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to fetch Zemanta provider profiles',
+        error instanceof Object && 'status' in error
+          ? (error as any).status
+          : HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

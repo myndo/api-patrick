@@ -17,6 +17,7 @@ export type LoadedToken = {
   expiresAt?: Date | null;
   scope?: string | null;
   metadata?: Record<string, string>;
+  profileId?: string | null;
   isExpired: boolean;
 };
 
@@ -28,6 +29,7 @@ export class IntegrationTokenService {
     userId: string,
     provider: string,
     data: SaveTokenData,
+    profileId?: string,
   ): Promise<void> {
     const encryptedAccess = encrypt(data.accessToken);
     const encryptedRefresh = data.refreshToken
@@ -37,9 +39,52 @@ export class IntegrationTokenService {
       ? encrypt(JSON.stringify(data.metadata))
       : null;
 
-    await this.databaseService.integrationToken.upsert({
-      where: { userId_provider: { userId, provider } },
-      create: {
+    if (profileId) {
+      await this.databaseService.integrationToken.upsert({
+        where: { profileId_provider: { profileId, provider } },
+        create: {
+          userId,
+          profileId,
+          provider,
+          accessToken: encryptedAccess,
+          refreshToken: encryptedRefresh,
+          expiresAt: data.expiresAt ?? null,
+          scope: data.scope ?? null,
+          metadata: encryptedMetadata,
+        },
+        update: {
+          userId,
+          accessToken: encryptedAccess,
+          ...(encryptedRefresh !== null && { refreshToken: encryptedRefresh }),
+          expiresAt: data.expiresAt ?? null,
+          scope: data.scope ?? null,
+          ...(encryptedMetadata !== null && { metadata: encryptedMetadata }),
+        },
+      });
+      return;
+    }
+
+    const existing = await this.databaseService.integrationToken.findFirst({
+      where: { userId, provider },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    if (existing) {
+      await this.databaseService.integrationToken.update({
+        where: { id: existing.id },
+        data: {
+          accessToken: encryptedAccess,
+          ...(encryptedRefresh !== null && { refreshToken: encryptedRefresh }),
+          expiresAt: data.expiresAt ?? null,
+          scope: data.scope ?? null,
+          ...(encryptedMetadata !== null && { metadata: encryptedMetadata }),
+        },
+      });
+      return;
+    }
+
+    await this.databaseService.integrationToken.create({
+      data: {
         userId,
         provider,
         accessToken: encryptedAccess,
@@ -48,23 +93,22 @@ export class IntegrationTokenService {
         scope: data.scope ?? null,
         metadata: encryptedMetadata,
       },
-      update: {
-        accessToken: encryptedAccess,
-        ...(encryptedRefresh !== null && { refreshToken: encryptedRefresh }),
-        expiresAt: data.expiresAt ?? null,
-        scope: data.scope ?? null,
-        ...(encryptedMetadata !== null && { metadata: encryptedMetadata }),
-      },
     });
   }
 
   async getToken(
     userId: string,
     provider: string,
+    profileId?: string,
   ): Promise<LoadedToken | null> {
-    const record = await this.databaseService.integrationToken.findUnique({
-      where: { userId_provider: { userId, provider } },
-    });
+    const record = profileId
+      ? await this.databaseService.integrationToken.findUnique({
+          where: { profileId_provider: { profileId, provider } },
+        })
+      : await this.databaseService.integrationToken.findFirst({
+          where: { userId, provider },
+          orderBy: { updatedAt: 'desc' },
+        });
 
     if (!record) return null;
 
@@ -84,13 +128,18 @@ export class IntegrationTokenService {
       expiresAt: record.expiresAt,
       scope: record.scope,
       metadata,
+      profileId: record.profileId,
       isExpired,
     };
   }
 
-  async deleteToken(userId: string, provider: string): Promise<void> {
+  async deleteToken(
+    userId: string,
+    provider: string,
+    profileId?: string,
+  ): Promise<void> {
     await this.databaseService.integrationToken.deleteMany({
-      where: { userId, provider },
+      where: profileId ? { profileId, provider } : { userId, provider },
     });
   }
 }

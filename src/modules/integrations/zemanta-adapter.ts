@@ -283,7 +283,7 @@ export class ZemantaAdapter {
         } catch (error) {
           console.warn(
             `Failed to fetch account details for ${accountId}:`,
-            error.message,
+            error instanceof Error ? error.message : String(error),
           );
         }
       }),
@@ -337,7 +337,7 @@ export class ZemantaAdapter {
           // If stats fetch fails for a campaign, return campaign without stats
           console.warn(
             `Failed to fetch stats for campaign ${campaign.id}:`,
-            error.message,
+            error instanceof Error ? error.message : String(error),
           );
           return campaign;
         }

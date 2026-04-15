@@ -33,6 +33,7 @@ model ProviderJob {
   updatedAt          DateTime           @updatedAt
   id                 String             @id @default(uuid())
   userId             String
+  profileId          String?
   provider           String             @default("tradedoubler")
   status             Int                @default(0)
   fromDate           DateTime
@@ -44,9 +45,13 @@ model ProviderJob {
   errorMessage       String?            @db.Text
   rowsCount          Int                @default(0)
   user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reports            TradeDoublerReport[]
+  profile            ProviderProfile?   @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  reports            TradeDoublerReport[] @relation("ProviderJobToTradeDoublerReport")
+  rtbReports         RTBHouseReport[]     @relation("ProviderJobToRTBHouseReport")
+  zemantaReports     ZemantaReport[]      @relation("ProviderJobToZemantaReport")
 
   @@index([userId])
+  @@index([profileId])
   @@index([provider])
   @@index([status])
 }
@@ -54,6 +59,7 @@ model ProviderJob {
 model IntegrationToken {
   id           String    @id @default(uuid())
   userId       String
+  profileId    String?
   provider     String    // "dv360" | "zemanta" | "rtbhouse" etc.
   accessToken  String    @db.Text
   refreshToken String?   @db.Text
@@ -63,9 +69,11 @@ model IntegrationToken {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile      ProviderProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
 
-  @@unique([userId, provider])
+  @@unique([profileId, provider])
   @@index([userId])
+  @@index([profileId])
   @@index([provider])
 }
 
@@ -88,8 +96,11 @@ model ProviderProfile {
   websiteUrl        String?
   rawData           String?  @db.Text
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  integrationTokens IntegrationToken[]
+  providerJobs      ProviderJob[]
 
-  @@unique([userId, provider])
+  @@unique([userId, provider, providerAccountId])
+  @@index([userId, provider])
   @@index([userId])
   @@index([provider])
 }
@@ -99,6 +110,8 @@ model RTBHouseReport {
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime?
   id               String    @id @default(uuid())
+  userId           String?
+  profileId        String?
   day              DateTime?
   campaign         String?
   investment       Float?
@@ -114,6 +127,11 @@ model RTBHouseReport {
   userSegment      String?
   provider         String?
   providerJobId    String?
+  providerJob      ProviderJob? @relation("ProviderJobToRTBHouseReport", fields: [providerJobId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([profileId])
+  @@index([providerJobId])
 }
 
 model TopQuery {
@@ -188,54 +206,52 @@ model PerformanceByDevice {
   @@index([device])
 }
 
-model ZemantaCampaign {
-  createdAt        DateTime                @default(now())
-  updatedAt        DateTime                @updatedAt
-  deletedAt        DateTime?
-  id               String                  @id // Zemanta campaign ID
-  accountId        String
-  accountName      String?
-  currency         String?
-  agencyName       String?
-  campaignManager  String?
-  name             String
-  archived         Boolean                 @default(false)
-  iabCategory      String?
-  frequencyCapping Int?
-  deliveryStatus   String?
-  totalCost        String?
-  impressions      Int?
-  clicks           Int?
-  cpc              String?
-  statsFrom        DateTime?
-  statsTo          DateTime?
-  budgets          ZemantaCampaignBudget[]
+model ZemantaReport {
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  deletedAt         DateTime?
+  id                String   @id // budget ID when available, otherwise campaign-{campaignId}
+  providerJobId     String?
+  userId            String?
+  profileId         String?
+  campaignId        String
+  budgetId          String?
+  accountId         String
+  accountName       String?
+  currency          String?
+  agencyName        String?
+  campaignManager   String?
+  campaignName      String
+  archived          Boolean  @default(false)
+  iabCategory       String?
+  frequencyCapping  Int?
+  deliveryStatus    String?
+  totalCost         String?
+  impressions       Int?
+  clicks            Int?
+  cpc               String?
+  statsFrom         DateTime?
+  statsTo           DateTime?
+  creditId          String?
+  amount            String?
+  margin            String?
+  comment           String?
+  budgetStartDate   DateTime?
+  budgetEndDate     DateTime?
+  budgetState       String?
+  spend             String?
+  available         String?
+  providerJob       ProviderJob? @relation("ProviderJobToZemantaReport", fields: [providerJobId], references: [id], onDelete: Cascade)
 
+  @@index([campaignId])
+  @@index([budgetId])
+  @@index([providerJobId])
+  @@index([userId])
+  @@index([profileId])
   @@index([accountId])
   @@index([archived])
   @@index([statsFrom, statsTo])
-}
-
-model ZemantaCampaignBudget {
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-  deletedAt  DateTime?
-  id         String          @id // Zemanta budget ID
-  campaignId String
-  creditId   String
-  amount     String
-  margin     String?
-  comment    String?
-  startDate  DateTime
-  endDate    DateTime
-  state      String
-  spend      String
-  available  String
-  campaign   ZemantaCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-
-  @@index([campaignId])
-  @@index([state])
-  @@index([startDate, endDate])
+  @@index([budgetState])
 }
 
 model TradeDoublerReport {
@@ -244,6 +260,7 @@ model TradeDoublerReport {
   deletedAt           DateTime?
   id                  String    @id @default(uuid())
   userId              String
+  profileId           String?
   jobId               String?
   date                DateTime
   organizationName    String
@@ -260,10 +277,11 @@ model TradeDoublerReport {
   clicks              Int       @default(0)
   currencyCode        String
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job                 ProviderJob? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  job                 ProviderJob? @relation("ProviderJobToTradeDoublerReport", fields: [jobId], references: [id], onDelete: Cascade)
 
   @@unique([userId, jobId, date, organizationId, programId, country])
   @@index([userId])
+  @@index([profileId])
   @@index([jobId])
   @@index([date])
   @@index([organizationId])

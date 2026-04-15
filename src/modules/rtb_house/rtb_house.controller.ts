@@ -2,26 +2,21 @@ import {
   Body,
   Controller,
   Get,
-  Headers,
   HttpException,
   HttpStatus,
   Post,
   Query,
   Res,
 } from '@nestjs/common';
-import { sign, verify } from 'jsonwebtoken';
+import { sign } from 'jsonwebtoken';
 import { config } from '../../app/config';
 import { reply } from '../../app/utils/reply';
-import { IntegrationTokenService } from '../integrations/integration-token.service';
 import { JobsService } from './rtb_house.service';
 import { FetchRTBHouseDataDto, LoginRTBHouseDto } from './rtb_house.dto';
 
 @Controller('rtbhouse')
 export class RtbHouseController {
-  constructor(
-    private readonly jobsService: JobsService,
-    private readonly integrationTokenService: IntegrationTokenService,
-  ) {}
+  constructor(private readonly jobsService: JobsService) {}
 
   private createRtbHousePlatformToken(username: string, password: string) {
     return sign(
@@ -32,70 +27,6 @@ export class RtbHouseController {
       },
       config.cookieKey,
       { expiresIn: '30d' },
-    );
-  }
-
-  /// Verify the token issued by our platform and extract RTB House credentials
-  private verifyRtbHousePlatformToken(token: string): {
-    username: string;
-    password: string;
-  } {
-    const payload = verify(token, config.cookieKey);
-
-    if (typeof payload === 'string') {
-      throw new HttpException(
-        'Invalid authorization token',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
-    if (
-      payload?.type !== 'rtbhouse-platform-auth' ||
-      !payload?.username ||
-      !payload?.password
-    ) {
-      throw new HttpException(
-        'Invalid authorization token payload',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
-    return {
-      username: String(payload.username),
-      password: String(payload.password),
-    };
-  }
-
-  private async resolveCredentials(
-    authHeader?: string,
-    userId?: string,
-  ): Promise<{ username: string; password: string }> {
-    if (userId) {
-      const stored = await this.integrationTokenService.getToken(
-        userId,
-        'rtbhouse',
-      );
-
-      if (stored && !stored.isExpired) {
-        if (stored.metadata?.username && stored.metadata?.password) {
-          return {
-            username: stored.metadata.username,
-            password: stored.metadata.password,
-          };
-        }
-
-        return this.verifyRtbHousePlatformToken(stored.accessToken);
-      }
-    }
-
-    if (authHeader?.startsWith('Bearer ')) {
-      const accessToken = authHeader.slice(7);
-      return this.verifyRtbHousePlatformToken(accessToken);
-    }
-
-    throw new HttpException(
-      'Missing valid RTB House credentials. Provide userId with stored credentials or Authorization: Bearer <accessToken>.',
-      HttpStatus.UNAUTHORIZED,
     );
   }
 
@@ -137,7 +68,7 @@ export class RtbHouseController {
     }
   }
 
-  /** Get TradeDoubler job status by jobId */
+  /** Get RTBHouse job status by jobId */
   @Get(`/jobs/status`)
   async get_Job_Status(@Res() res, @Query('job_Id') jobId: string) {
     try {
@@ -153,14 +84,14 @@ export class RtbHouseController {
       return reply({
         res,
         results: {
-          message: 'TradeDoubler job status fetched successfully',
+          message: 'RTBHouse job status fetched successfully',
           data,
         },
       });
     } catch (error: unknown) {
       throw new HttpException(
         (error instanceof Error ? error.message : String(error)) ||
-          'Failed to fetch TradeDoubler job status',
+          'Failed to fetch RTBHouse job status',
         error instanceof Object && 'status' in error
           ? (error as any).status
           : HttpStatus.INTERNAL_SERVER_ERROR,
@@ -170,12 +101,7 @@ export class RtbHouseController {
 
   /** Get RTBHouse saved data by jobId */
   @Get(`/jobs/data`)
-  async find_All(
-    @Res() res,
-    @Headers('authorization') authHeader: string,
-    @Query('job_Id') jobId: string,
-    @Query('userId') userId?: string,
-  ) {
+  async find_All(@Res() res, @Query('job_Id') jobId: string) {
     try {
       if (!jobId) {
         throw new HttpException(
@@ -183,8 +109,6 @@ export class RtbHouseController {
           HttpStatus.BAD_REQUEST,
         );
       }
-
-      await this.resolveCredentials(authHeader, userId);
 
       const jobs = await this.jobsService.findAllByJobId(jobId);
 
@@ -236,25 +160,19 @@ export class RtbHouseController {
     }
   }
 
-  /** Fetch RTBHouse data and save to database */
+  /** Queue RTBHouse data job */
   @Post(`/jobs/create`)
-  async fetch_RTBHouse_Data(
-    @Res() res,
-    @Headers('authorization') authHeader: string | undefined,
-    @Body() body: FetchRTBHouseDataDto,
-  ) {
+  async fetch_RTBHouse_Data(@Res() res, @Body() body: FetchRTBHouseDataDto) {
     try {
-      const { dayFrom, dayTo, userId } = body;
+      const { dayFrom, dayTo, profileId } = body;
 
-      // Validate required fields
-      if (!dayFrom || !dayTo || !userId) {
+      if (!dayFrom || !dayTo || !profileId) {
         throw new HttpException(
-          'Missing required fields: dayFrom, dayTo, userId',
+          'Missing required fields: dayFrom, dayTo, profileId',
           HttpStatus.BAD_REQUEST,
         );
       }
 
-      await this.resolveCredentials(authHeader, userId);
       const result = await this.jobsService.createAndQueueRTBHouseJob(body);
 
       return reply({
@@ -265,7 +183,6 @@ export class RtbHouseController {
         },
       });
     } catch (error: unknown) {
-      // Preserve HttpException status codes
       if (error instanceof HttpException) {
         throw error;
       }

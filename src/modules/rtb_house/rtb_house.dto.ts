@@ -23,4 +23,8 @@ export class FetchRTBHouseDataDto {
   @IsString()
   @IsNotEmpty()
   userId?: string;
+
+  @IsNotEmpty()
+  @IsString()
+  profileId: string;
 }

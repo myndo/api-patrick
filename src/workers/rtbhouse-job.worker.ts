@@ -19,10 +19,18 @@ type RtbCredentials = {
 async function resolveCredentials(
   prisma: PrismaClient,
   userId: string,
+  profileId?: string | null,
 ): Promise<RtbCredentials> {
-  const record = await prisma.integrationToken.findUnique({
-    where: { userId_provider: { userId, provider: 'rtbhouse' } },
-  });
+  const record = profileId
+    ? await prisma.integrationToken.findUnique({
+        where: {
+          profileId_provider: { profileId, provider: 'rtbhouse' },
+        },
+      })
+    : await prisma.integrationToken.findFirst({
+        where: { userId, provider: 'rtbhouse' },
+        orderBy: { updatedAt: 'desc' },
+      });
 
   if (!record) {
     throw new Error(
@@ -67,7 +75,11 @@ async function processJob(prisma: PrismaClient, jobId: string): Promise<void> {
   console.log(`[rtb-worker] Job ${jobId} -> RUNNING`);
 
   try {
-    const { username, password } = await resolveCredentials(prisma, job.userId);
+    const { username, password } = await resolveCredentials(
+      prisma,
+      job.userId,
+      job.profileId,
+    );
 
     const advertiserId = job.reportType;
     if (!advertiserId) {
@@ -117,6 +129,8 @@ async function processJob(prisma: PrismaClient, jobId: string): Promise<void> {
       if (!existing) {
         await prisma.rTBHouseReport.create({
           data: {
+            userId: job.userId,
+            profileId: job.profileId || null,
             day: new Date(data.day),
             campaign: data.campaign,
             status: data.status,

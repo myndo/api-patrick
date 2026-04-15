@@ -15,15 +15,23 @@ import { decrypt, encrypt } from '../modules/integrations/token-encryption';
 async function resolveToken(
   prisma: PrismaClient,
   userId: string,
+  profileId?: string | null,
   accessTokenFromEnv?: string,
 ): Promise<string> {
   if (accessTokenFromEnv?.trim()) {
     return accessTokenFromEnv.trim();
   }
 
-  const record = await prisma.integrationToken.findUnique({
-    where: { userId_provider: { userId, provider: 'tradedoubler' } },
-  });
+  const record = profileId
+    ? await prisma.integrationToken.findUnique({
+        where: {
+          profileId_provider: { profileId, provider: 'tradedoubler' },
+        },
+      })
+    : await prisma.integrationToken.findFirst({
+        where: { userId, provider: 'tradedoubler' },
+        orderBy: { updatedAt: 'desc' },
+      });
 
   if (!record) {
     throw new Error(
@@ -91,7 +99,7 @@ async function resolveToken(
 
   // Persist refreshed tokens so future jobs and API calls benefit.
   await prisma.integrationToken.update({
-    where: { userId_provider: { userId, provider: 'tradedoubler' } },
+    where: { id: record.id },
     data: {
       accessToken: encrypt(newAccessToken),
       refreshToken: encrypt(newRefreshToken),
@@ -135,14 +143,23 @@ async function processJob(
     const resolvedAccessToken = await resolveToken(
       prisma,
       job.userId,
+      job.profileId,
       accessTokenFromEnv,
     );
 
-    const tokenRecord = await prisma.integrationToken.findUnique({
-      where: {
-        userId_provider: { userId: job.userId, provider: 'tradedoubler' },
-      },
-    });
+    const tokenRecord = job.profileId
+      ? await prisma.integrationToken.findUnique({
+          where: {
+            profileId_provider: {
+              profileId: job.profileId,
+              provider: 'tradedoubler',
+            },
+          },
+        })
+      : await prisma.integrationToken.findFirst({
+          where: { userId: job.userId, provider: 'tradedoubler' },
+          orderBy: { updatedAt: 'desc' },
+        });
 
     const metadataStr = tokenRecord?.metadata
       ? decrypt(tokenRecord.metadata)
@@ -164,6 +181,7 @@ async function processJob(
     const freshAccessToken = await resolveToken(
       prisma,
       job.userId,
+      job.profileId,
       accessTokenFromEnv,
     );
     adapter.setAccessToken(freshAccessToken);
@@ -195,6 +213,7 @@ async function processJob(
           data: {
             user: { connect: { id: job.userId } },
             job: { connect: { id: job.id } },
+            profileId: job.profileId || null,
             date: new Date(data.date),
             organizationName: data.organizationName,
             organizationId: data.organizationId,

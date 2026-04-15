@@ -2,7 +2,7 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { ZemantaAdapter } from '../integrations/zemanta-adapter';
 import { DatabaseService } from '../../app/database/database.service';
 import { IntegrationTokenService } from '../integrations/integration-token.service';
-import { GenerateAccessTokenDto } from './zemanta.dto';
+import { CreateZemantaJobDto, GenerateAccessTokenDto } from './zemanta.dto';
 
 @Injectable()
 export class ZemantaService {
@@ -26,6 +26,94 @@ export class ZemantaService {
     return authorization.replace(/^Bearer\s+/i, '').trim();
   }
 
+  private async resolveOrCreateUserFromAccounts(accounts: any[]) {
+    const primary = accounts[0] || {};
+    const accountId = primary.id;
+
+    const email = accountId
+      ? `zemanta-account-${String(accountId).toLowerCase()}@zemanta.local`
+      : undefined;
+
+    if (!email) {
+      throw new HttpException(
+        'Unable to create user from Zemanta accounts: missing account id.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const displayName = primary.name || `Zemanta Account ${accountId || ''}`;
+
+    return this.databaseService.user.upsert({
+      where: { email },
+      create: {
+        email,
+        name: displayName,
+        provider: 'zemanta',
+        confirmedAt: new Date(),
+      },
+      update: {
+        name: displayName,
+        provider: 'zemanta',
+      },
+    });
+  }
+
+  private async saveAccountsToProviderProfile(userId: string, accounts: any[]) {
+    const savedProfiles = [];
+    const agencyIds = Array.from(
+      new Set(
+        accounts
+          .map((account) => account?.agencyId)
+          .filter(
+            (agencyId): agencyId is string =>
+              typeof agencyId === 'string' && agencyId.trim().length > 0,
+          ),
+      ),
+    );
+    const rawData = JSON.stringify(agencyIds);
+
+    for (const account of accounts) {
+      const providerAccountId = account?.id ? String(account.id) : null;
+      const data = {
+        providerAccountId,
+        displayName: account?.name || null,
+        currency: account?.currency || null,
+        rawData,
+      };
+
+      const existing = providerAccountId
+        ? await this.databaseService.providerProfile.findFirst({
+            where: {
+              userId,
+              provider: 'zemanta',
+              providerAccountId,
+              deletedAt: null,
+            },
+          })
+        : null;
+
+      if (existing) {
+        const updated = await this.databaseService.providerProfile.update({
+          where: { id: existing.id },
+          data,
+        });
+        savedProfiles.push(updated);
+        continue;
+      }
+
+      const created = await this.databaseService.providerProfile.create({
+        data: {
+          user: { connect: { id: userId } },
+          provider: 'zemanta',
+          ...data,
+        },
+      });
+      savedProfiles.push(created);
+    }
+
+    return savedProfiles;
+  }
+
   /**
    * Generate access token from provided credentials
    */
@@ -34,40 +122,65 @@ export class ZemantaService {
       const adapter = new ZemantaAdapter({
         clientId: body.clientId,
         clientSecret: body.clientSecret,
-        baseUrl: body.baseUrl,
       });
 
       const accessToken = await adapter.getAccessToken();
 
-      if (body.userId) {
-        // Zemanta client_credentials tokens typically last 1 hour
-        const expiresAt = new Date(Date.now() + 55 * 60 * 1000);
-        await this.integrationTokenService.saveToken(body.userId, 'zemanta', {
-          accessToken,
-          expiresAt,
-          metadata: {
-            clientId: body.clientId,
-            clientSecret: body.clientSecret,
-            ...(body.baseUrl && { baseUrl: body.baseUrl }),
+      const accounts = await adapter.listAccounts(
+        {
+          includeDeliveryStatus: true,
+        },
+        accessToken,
+      );
+
+      if (!accounts.length) {
+        throw new HttpException(
+          'No Zemanta accounts were returned for these credentials.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const user = await this.resolveOrCreateUserFromAccounts(accounts);
+      const expiresAt = new Date(Date.now() + 55 * 60 * 1000);
+
+      const providerProfiles = await this.saveAccountsToProviderProfile(
+        user.id,
+        accounts,
+      );
+
+      for (const profile of providerProfiles) {
+        await this.integrationTokenService.saveToken(
+          user.id,
+          'zemanta',
+          {
+            accessToken,
+            expiresAt,
+            metadata: {
+              clientId: body.clientId,
+              clientSecret: body.clientSecret,
+              baseUrl:
+                process.env.ZEMANTA_BASE_URL || 'https://oneapi.zemanta.com',
+            },
           },
-        });
+          profile.id,
+        );
       }
 
       return {
-        accessToken,
-        authorization: `Bearer ${accessToken}`,
+        user_id: user.id,
+        id: providerProfiles[0]?.id ?? null,
       };
     } catch (error) {
-      throw new HttpException(
-        `Failed to generate access token: ${error.message}`,
-        HttpStatus.BAD_REQUEST,
-      );
+      if (error instanceof HttpException) {
+        throw error;
+      }
     }
   }
 
   private async resolveZemantaToken(
     authorization?: string,
     userId?: string,
+    profileId?: string,
   ): Promise<string | undefined> {
     const fromHeader = this.extractAccessToken(authorization);
     if (fromHeader) return fromHeader;
@@ -77,6 +190,7 @@ export class ZemantaService {
     const stored = await this.integrationTokenService.getToken(
       userId,
       'zemanta',
+      profileId,
     );
     if (!stored) return undefined;
 
@@ -95,11 +209,16 @@ export class ZemantaService {
     const freshToken = await adapter.getAccessToken();
     const expiresAt = new Date(Date.now() + 55 * 60 * 1000);
 
-    await this.integrationTokenService.saveToken(userId, 'zemanta', {
-      accessToken: freshToken,
-      expiresAt,
-      metadata: stored.metadata,
-    });
+    await this.integrationTokenService.saveToken(
+      userId,
+      'zemanta',
+      {
+        accessToken: freshToken,
+        expiresAt,
+        metadata: stored.metadata,
+      },
+      profileId,
+    );
 
     return freshToken;
   }
@@ -125,7 +244,7 @@ export class ZemantaService {
       return { accounts };
     } catch (error) {
       throw new HttpException(
-        `Failed to list accounts: ${error.message}`,
+        `Failed to list accounts: ${error}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -150,8 +269,11 @@ export class ZemantaService {
       return { account };
     } catch (error) {
       throw new HttpException(
-        `Failed to get account details: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to fetch Zemanta account details',
+        error instanceof Object && 'status' in error
+          ? (error as any).status
+          : HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -195,8 +317,11 @@ export class ZemantaService {
       return { campaigns };
     } catch (error) {
       throw new HttpException(
-        `Failed to list campaigns: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to list campaigns',
+        error instanceof Object && 'status' in error
+          ? (error as any).status
+          : HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -222,8 +347,11 @@ export class ZemantaService {
       return { stats };
     } catch (error) {
       throw new HttpException(
-        `Failed to get campaign stats: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to get campaign stats',
+        error instanceof Object && 'status' in error
+          ? (error as any).status
+          : HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -245,8 +373,11 @@ export class ZemantaService {
       return { budgets };
     } catch (error) {
       throw new HttpException(
-        `Failed to get campaign budgets: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to get campaign budgets',
+        error instanceof Object && 'status' in error
+          ? (error as any).status
+          : HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -272,220 +403,123 @@ export class ZemantaService {
       return result;
     } catch (error) {
       throw new HttpException(
-        `Failed to get campaign details: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        (error instanceof Error ? error.message : String(error)) ||
+          'Failed to get campaign details',
+        error instanceof Object && 'status' in error
+          ? (error as any).status
+          : HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
-  /**
-   * Get all campaigns from database with optional date filtering
-   */
-  async getAllCampaignsFromDatabase(statsFrom?: string, statsTo?: string) {
-    try {
-      const where: any = {};
+  async createAndQueueZemantaJob(body: CreateZemantaJobDto) {
+    const { fromDate, toDate, profileId, accountId } = body;
 
-      // Add date filters if provided
-      if (statsFrom || statsTo) {
-        where.AND = [];
+    const profile = await this.databaseService.providerProfile.findUnique({
+      where: { id: profileId },
+      select: {
+        id: true,
+        userId: true,
+        provider: true,
+        providerAccountId: true,
+      },
+    });
 
-        if (statsFrom) {
-          where.AND.push({
-            statsFrom: {
-              gte: new Date(statsFrom),
-            },
-          });
-        }
-
-        if (statsTo) {
-          where.AND.push({
-            statsTo: {
-              lte: new Date(statsTo),
-            },
-          });
-        }
-      }
-
-      const campaigns = await this.databaseService.zemantaCampaign.findMany({
-        where,
-        include: {
-          budgets: true,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
-
-      return { campaigns };
-    } catch (error) {
+    if (!profile || profile.provider !== 'zemanta') {
       throw new HttpException(
-        `Failed to get campaigns from database: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        `No zemanta profile found for profileId=${profileId}`,
+        HttpStatus.NOT_FOUND,
       );
     }
+
+    const userId = profile.userId;
+    const resolvedAccountId = accountId || profile.providerAccountId || null;
+
+    const job = await this.databaseService.providerJob.create({
+      data: {
+        user: { connect: { id: userId } },
+        profile: { connect: { id: profileId } },
+        provider: 'zemanta',
+        status: 0,
+        fromDate: new Date(fromDate),
+        toDate: new Date(toDate),
+        reportType: resolvedAccountId,
+      },
+    });
+
+    return { job_Id: job.id };
   }
 
-  /**
-   * Sync all campaigns with budgets and stats to database
-   */
-  async syncCampaignsToDatabase(
-    from: string,
-    to: string,
-    authorization?: string,
-    userId?: string,
-  ) {
-    try {
-      // Import Prisma client dynamically to avoid circular dependencies
-      const { DatabaseService } =
-        await import('../../app/database/database.service');
-      const prisma = new DatabaseService();
+  async getJobStatus(jobId: string) {
+    const job = await this.databaseService.providerJob.findUnique({
+      where: { id: jobId },
+    });
 
-      const accessToken = await this.resolveZemantaToken(authorization, userId);
-
-      // Get all accounts
-      const accounts = await this.zemantaAdapter.listAccounts(
-        {
-          includeArchived: false,
-        },
-        accessToken,
-      );
-
-      let totalCampaigns = 0;
-      const errors = [];
-
-      // Process each account
-      for (const account of accounts) {
-        try {
-          // Get campaigns for this account with budgets and stats
-          const { campaigns } = await this.listCampaigns(
-            {
-              accountId: account.id,
-              includeBudgets: true,
-              includeGoals: false,
-              includeArchived: false,
-              excludeInactive: false,
-              includeDeliveryStatus: true,
-              from,
-              to,
-            },
-            accessToken ? `Bearer ${accessToken}` : undefined,
-            userId,
-          );
-
-          // Store each campaign
-          for (const campaign of campaigns) {
-            try {
-              // Type assertion for campaigns with stats
-              const campaignWithStats = campaign as any;
-
-              // Upsert campaign
-              await prisma.zemantaCampaign.upsert({
-                where: { id: campaign.id },
-                update: {
-                  accountId: campaign.accountId,
-                  accountName: campaign.accountName,
-                  currency: campaign.currency,
-                  agencyName: campaign.agencyName,
-                  campaignManager: campaign.campaignManager,
-                  name: campaign.name,
-                  archived: campaign.archived || false,
-                  iabCategory: campaign.iabCategory,
-                  frequencyCapping: campaign.frequencyCapping,
-                  deliveryStatus: campaign.deliveryStatus,
-                  totalCost: campaignWithStats.stats?.totalCost,
-                  impressions: campaignWithStats.stats?.impressions,
-                  clicks: campaignWithStats.stats?.clicks,
-                  cpc: campaignWithStats.stats?.cpc,
-                  statsFrom: from ? new Date(from) : null,
-                  statsTo: to ? new Date(to) : null,
-                  updatedAt: new Date(),
-                },
-                create: {
-                  id: campaign.id,
-                  accountId: campaign.accountId,
-                  accountName: campaign.accountName,
-                  currency: campaign.currency,
-                  agencyName: campaign.agencyName,
-                  campaignManager: campaign.campaignManager,
-                  name: campaign.name,
-                  archived: campaign.archived || false,
-                  iabCategory: campaign.iabCategory,
-                  frequencyCapping: campaign.frequencyCapping,
-                  deliveryStatus: campaign.deliveryStatus,
-                  totalCost: campaignWithStats.stats?.totalCost,
-                  impressions: campaignWithStats.stats?.impressions,
-                  clicks: campaignWithStats.stats?.clicks,
-                  cpc: campaignWithStats.stats?.cpc,
-                  statsFrom: from ? new Date(from) : null,
-                  statsTo: to ? new Date(to) : null,
-                },
-              });
-
-              // Store budgets if available
-              if (campaign.budgets && campaign.budgets.length > 0) {
-                for (const budget of campaign.budgets) {
-                  await prisma.zemantaCampaignBudget.upsert({
-                    where: { id: budget.id },
-                    update: {
-                      campaignId: campaign.id,
-                      creditId: budget.creditId,
-                      amount: budget.amount,
-                      margin: budget.margin,
-                      comment: budget.comment,
-                      startDate: new Date(budget.startDate),
-                      endDate: new Date(budget.endDate),
-                      state: budget.state,
-                      spend: budget.spend,
-                      available: budget.available,
-                      updatedAt: new Date(),
-                    },
-                    create: {
-                      id: budget.id,
-                      campaignId: campaign.id,
-                      creditId: budget.creditId,
-                      amount: budget.amount,
-                      margin: budget.margin,
-                      comment: budget.comment,
-                      startDate: new Date(budget.startDate),
-                      endDate: new Date(budget.endDate),
-                      state: budget.state,
-                      spend: budget.spend,
-                      available: budget.available,
-                    },
-                  });
-                }
-              }
-
-              totalCampaigns++;
-            } catch (campaignError) {
-              errors.push({
-                campaignId: campaign.id,
-                campaignName: campaign.name,
-                error: campaignError.message,
-              });
-            }
-          }
-        } catch (accountError) {
-          errors.push({
-            accountId: account.id,
-            accountName: account.name,
-            error: accountError.message,
-          });
-        }
-      }
-
-      return {
-        success: true,
-        totalAccounts: accounts.length,
-        totalCampaigns,
-        errors,
-        message: `Synced ${totalCampaigns} campaigns from ${accounts.length} accounts`,
-      };
-    } catch (error) {
+    if (!job || job.provider !== 'zemanta') {
       throw new HttpException(
-        `Failed to sync campaigns: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        `No Zemanta job found for job_Id=${jobId}`,
+        HttpStatus.NOT_FOUND,
       );
     }
+
+    return {
+      job_Id: job.id,
+      status: job.status,
+    };
+  }
+
+  async findAllByJobId(jobId: string) {
+    const job = await this.databaseService.providerJob.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job || job.provider !== 'zemanta') {
+      throw new HttpException(
+        `No Zemanta job found for job_Id=${jobId}`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const reports = await this.databaseService.zemantaReport.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          { providerJobId: job.id },
+          {
+            statsFrom: { gte: job.fromDate },
+            statsTo: { lte: job.toDate },
+            ...(job.reportType ? { accountId: job.reportType } : {}),
+          },
+        ],
+      },
+      orderBy: [{ createdAt: 'asc' }, { campaignId: 'asc' }],
+    });
+
+    return {
+      job_Id: job.id,
+      status: job.status,
+      rowsCount: job.rowsCount,
+      data: reports,
+    };
+  }
+
+  async getZemantaProfilesByUserId(userId: string) {
+    const profiles = await this.databaseService.providerProfile.findMany({
+      where: {
+        userId,
+        provider: 'zemanta',
+        deletedAt: null,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (profiles.length === 0) {
+      throw new HttpException(
+        `No zemanta profiles found for userId=${userId}`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return profiles;
   }
 }
