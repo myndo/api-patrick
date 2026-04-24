@@ -2,11 +2,22 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { ApiVersion } from '@shopify/shopify-api';
 import { ShopifyServiceAdapter } from '../integrations/shopify-service-adapter';
 
+const datedShopifyApiVersions = [...Object.values(ApiVersion)]
+  .filter((value): value is ApiVersion => value !== ApiVersion.Unstable)
+  .sort();
+
+const DEFAULT_SHOPIFY_API_VERSION =
+  datedShopifyApiVersions[datedShopifyApiVersions.length - 1];
+
 @Injectable()
 export class ShopifyService {
   private shopifyAdapter: ShopifyServiceAdapter;
 
   constructor() {
+    const apiVersion =
+      (process.env.SHOPIFY_API_VERSION as ApiVersion | undefined) ??
+      DEFAULT_SHOPIFY_API_VERSION;
+
     // Initialize Shopify adapter with config from environment variables
     this.shopifyAdapter = new ShopifyServiceAdapter({
       apiKey: process.env.SHOPIFY_API_KEY || '',
@@ -18,7 +29,7 @@ export class ShopifyService {
         'read_customers',
       ],
       hostName: process.env.SHOPIFY_HOST_NAME || 'localhost:8000',
-      apiVersion: ApiVersion.October23,
+      apiVersion,
       isEmbeddedApp: false,
     });
   }
@@ -39,7 +50,7 @@ export class ShopifyService {
       };
     } catch (error) {
       throw new HttpException(
-        `Failed to fetch products: ${error.message}`,
+        `Failed to fetch products: ${error instanceof Error ? error.message : 'Unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -58,7 +69,7 @@ export class ShopifyService {
       return product;
     } catch (error) {
       throw new HttpException(
-        `Failed to fetch product: ${error.message}`,
+        `Failed to fetch product: ${error instanceof Error ? error.message : 'Unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -86,7 +97,7 @@ export class ShopifyService {
       };
     } catch (error) {
       throw new HttpException(
-        `Failed to fetch orders: ${error.message}`,
+        `Failed to fetch orders: ${error instanceof Error ? error.message : 'Unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -105,7 +116,7 @@ export class ShopifyService {
       return order;
     } catch (error) {
       throw new HttpException(
-        `Failed to fetch order: ${error.message}`,
+        `Failed to fetch order: ${error instanceof Error ? error.message : 'Unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -127,7 +138,7 @@ export class ShopifyService {
       };
     } catch (error) {
       throw new HttpException(
-        `Failed to fetch customers: ${error.message}`,
+        `Failed to fetch customers: ${error instanceof Error ? error.message : 'Unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -145,7 +156,7 @@ export class ShopifyService {
       return shopInfo;
     } catch (error) {
       throw new HttpException(
-        `Failed to fetch shop info: ${error.message}`,
+        `Failed to fetch shop info: ${error instanceof Error ? error.message : 'Unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -173,7 +184,7 @@ export class ShopifyService {
       };
     } catch (error) {
       throw new HttpException(
-        `Failed to search products: ${error.message}`,
+        `Failed to search products: ${error instanceof Error ? error.message : 'Unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -191,7 +202,7 @@ export class ShopifyService {
       return { count };
     } catch (error) {
       throw new HttpException(
-        `Failed to get product count: ${error.message}`,
+        `Failed to get product count: ${error instanceof Error ? error.message : 'Unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -214,7 +225,7 @@ export class ShopifyService {
       return { count };
     } catch (error) {
       throw new HttpException(
-        `Failed to get order count: ${error.message}`,
+        `Failed to get order count: ${error instanceof Error ? error.message : 'Unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -232,7 +243,7 @@ export class ShopifyService {
       return { count };
     } catch (error) {
       throw new HttpException(
-        `Failed to get customer count: ${error.message}`,
+        `Failed to get customer count: ${error instanceof Error ? error.message : 'Unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

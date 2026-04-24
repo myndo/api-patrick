@@ -110,7 +110,7 @@ export class ShopifyServiceAdapter {
       apiSecretKey: config.apiSecretKey,
       scopes: config.scopes,
       hostName: config.hostName,
-      apiVersion: config.apiVersion || ApiVersion.October23,
+      apiVersion: config.apiVersion,
       isEmbeddedApp: config.isEmbeddedApp || false,
     });
   }
@@ -148,12 +148,7 @@ export class ShopifyServiceAdapter {
 
       return response.body.products as ShopifyProduct[];
     } catch (error) {
-      console.error('Shopify API Error Details:', {
-        shop,
-        errorMessage: error.message,
-        errorResponse: error.response?.body,
-        errorCode: error.response?.code,
-      });
+      console.error('Shopify API Error Details:');
       throw error;
     }
   }

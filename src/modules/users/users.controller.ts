@@ -13,8 +13,11 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { RequestPaginationDto, addPagination } from 'src/app/utils/pagination';
-import { SearchQueryDto } from 'src/app/utils/search-query';
+import {
+  RequestPaginationDto,
+  addPagination,
+} from '../../app/utils/pagination';
+import { SearchQueryDto } from '../../app/utils/search-query';
 import { config } from '../../app/config/index';
 import { reply } from '../../app/utils/reply';
 import { UserAuthGuard } from './middleware';

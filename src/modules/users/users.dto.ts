@@ -7,7 +7,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { Match } from 'src/app/utils/decorators';
+import { Match } from '../../app/utils/decorators';
 
 export class RegisterUserDto {
   @IsNotEmpty()

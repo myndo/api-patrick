@@ -9,6 +9,7 @@ import { OAuthModule } from './modules/oauth/oauth.module';
 import { ZemantaModule } from './modules/zemanta/zemanta.module';
 import { TradeDoublerModule } from './modules/tradedoubler/tradedoubler.module';
 import { Dv360Module } from './modules/dv360/dv360.module';
+import { AdformModule } from './modules/adform/adform.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { Dv360Module } from './modules/dv360/dv360.module';
     ZemantaModule,
     TradeDoublerModule,
     Dv360Module,
+    AdformModule,
   ],
 })
 export class AppModule {}
