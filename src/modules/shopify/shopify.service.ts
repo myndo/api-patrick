@@ -1,19 +1,11 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { ApiVersion } from '@shopify/shopify-api';
+import { Injectable } from '@nestjs/common';
 import { ShopifyServiceAdapter } from '../integrations/shopify-service-adapter';
-
-const datedShopifyApiVersions = [...Object.values(ApiVersion)]
-  .filter((value): value is ApiVersion => value !== ApiVersion.Unstable)
-  .sort();
-
-const DEFAULT_SHOPIFY_API_VERSION =
-  datedShopifyApiVersions[datedShopifyApiVersions.length - 1];
-
+//import shopifyApi, { ApiVersion, Session } from '@shopify/shopify-api';
 @Injectable()
 export class ShopifyService {
   private shopifyAdapter: ShopifyServiceAdapter;
 
-  constructor() {
+  /* constructor() {
     const apiVersion =
       (process.env.SHOPIFY_API_VERSION as ApiVersion | undefined) ??
       DEFAULT_SHOPIFY_API_VERSION;
@@ -32,12 +24,12 @@ export class ShopifyService {
       apiVersion,
       isEmbeddedApp: false,
     });
-  }
+  } */
 
   /**
    * Fetch all products from Shopify
    */
-  async fetchProducts(shop: string, accessToken: string, limit: number = 50) {
+  /*  async fetchProducts(shop: string, accessToken: string, limit: number = 50) {
     try {
       const products = await this.shopifyAdapter.fetchProducts(
         shop,
@@ -54,12 +46,12 @@ export class ShopifyService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-  }
+  } */
 
   /**
    * Fetch a single product by ID
    */
-  async fetchProductById(shop: string, accessToken: string, productId: number) {
+  /*  async fetchProductById(shop: string, accessToken: string, productId: number) {
     try {
       const product = await this.shopifyAdapter.fetchProductById(
         shop,
@@ -73,12 +65,12 @@ export class ShopifyService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-  }
+  } */
 
   /**
    * Fetch all orders from Shopify
    */
-  async fetchOrders(
+  /* async fetchOrders(
     shop: string,
     accessToken: string,
     status: 'open' | 'closed' | 'cancelled' | 'any' = 'any',
@@ -101,12 +93,12 @@ export class ShopifyService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-  }
+  } */
 
   /**
    * Fetch a single order by ID
    */
-  async fetchOrderById(shop: string, accessToken: string, orderId: number) {
+  /*  async fetchOrderById(shop: string, accessToken: string, orderId: number) {
     try {
       const order = await this.shopifyAdapter.fetchOrderById(
         shop,
@@ -120,12 +112,12 @@ export class ShopifyService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-  }
+  } */
 
   /**
    * Fetch all customers from Shopify
    */
-  async fetchCustomers(shop: string, accessToken: string, limit: number = 50) {
+  /* async fetchCustomers(shop: string, accessToken: string, limit: number = 50) {
     try {
       const customers = await this.shopifyAdapter.fetchCustomers(
         shop,
@@ -142,12 +134,12 @@ export class ShopifyService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-  }
+  } */
 
   /**
    * Fetch shop information
    */
-  async fetchShopInfo(shop: string, accessToken: string) {
+  /*  async fetchShopInfo(shop: string, accessToken: string) {
     try {
       const shopInfo = await this.shopifyAdapter.fetchShopInfo(
         shop,
@@ -160,12 +152,12 @@ export class ShopifyService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-  }
+  } */
 
   /**
    * Search products by query
    */
-  async searchProducts(
+  /* async searchProducts(
     shop: string,
     accessToken: string,
     query: string,
@@ -188,12 +180,12 @@ export class ShopifyService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-  }
+  } */
 
   /**
    * Get product count
    */
-  async getProductCount(shop: string, accessToken: string) {
+  /*  async getProductCount(shop: string, accessToken: string) {
     try {
       const count = await this.shopifyAdapter.getProductCount(
         shop,
@@ -206,12 +198,12 @@ export class ShopifyService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-  }
+  } */
 
   /**
    * Get order count
    */
-  async getOrderCount(
+  /*  async getOrderCount(
     shop: string,
     accessToken: string,
     status: 'open' | 'closed' | 'cancelled' | 'any' = 'any',
@@ -229,12 +221,12 @@ export class ShopifyService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-  }
+  } */
 
   /**
    * Get customer count
    */
-  async getCustomerCount(shop: string, accessToken: string) {
+  /* async getCustomerCount(shop: string, accessToken: string) {
     try {
       const count = await this.shopifyAdapter.getCustomerCount(
         shop,
@@ -247,5 +239,5 @@ export class ShopifyService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-  }
+  } */
 }

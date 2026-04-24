@@ -1,12 +1,9 @@
-import { shopifyApi, ApiVersion, Session } from '@shopify/shopify-api';
-import '@shopify/shopify-api/adapters/node';
-
 export interface ShopifyConfig {
   apiKey: string;
   apiSecretKey: string;
   scopes: string[];
   hostName: string;
-  apiVersion?: ApiVersion;
+  //apiVersion?: ApiVersion;
   isEmbeddedApp?: boolean;
 }
 
@@ -100,25 +97,25 @@ export interface ShopifyCustomer {
 }
 
 export class ShopifyServiceAdapter {
-  private shopify: ReturnType<typeof shopifyApi>;
-  private config: ShopifyConfig;
+  /*  private shopify: ReturnType<typeof shopifyApi>;
+  private config: ShopifyConfig; */
 
-  constructor(config: ShopifyConfig) {
-    this.config = config;
-    this.shopify = shopifyApi({
+  constructor() {
+    //  this.config = config;
+    /*  this.shopify = shopifyApi({
       apiKey: config.apiKey,
       apiSecretKey: config.apiSecretKey,
       scopes: config.scopes,
       hostName: config.hostName,
       apiVersion: config.apiVersion,
       isEmbeddedApp: config.isEmbeddedApp || false,
-    });
+    }); */
   }
 
   /**
    * Create a REST client with the provided session
    */
-  private async createRestClient(shop: string, accessToken: string) {
+  /*   private async createRestClient(shop: string, accessToken: string) {
     const session = new Session({
       id: `offline_${shop}`,
       shop,
@@ -128,12 +125,12 @@ export class ShopifyServiceAdapter {
     });
 
     return new this.shopify.clients.Rest({ session });
-  }
+  } */
 
   /**
    * Fetch all products from Shopify store
    */
-  async fetchProducts(
+  /* async fetchProducts(
     shop: string,
     accessToken: string,
     limit: number = 50,
@@ -151,12 +148,12 @@ export class ShopifyServiceAdapter {
       console.error('Shopify API Error Details:');
       throw error;
     }
-  }
+  } */
 
   /**
    * Fetch a single product by ID
    */
-  async fetchProductById(
+  /* async fetchProductById(
     shop: string,
     accessToken: string,
     productId: number,
@@ -168,12 +165,12 @@ export class ShopifyServiceAdapter {
     });
 
     return response.body.product as ShopifyProduct;
-  }
+  } */
 
   /**
    * Fetch all orders from Shopify store
    */
-  async fetchOrders(
+  /*  async fetchOrders(
     shop: string,
     accessToken: string,
     status: 'open' | 'closed' | 'cancelled' | 'any' = 'any',
@@ -190,29 +187,16 @@ export class ShopifyServiceAdapter {
     });
 
     return response.body.orders as ShopifyOrder[];
-  }
+  } */
 
   /**
    * Fetch a single order by ID
    */
-  async fetchOrderById(
-    shop: string,
-    accessToken: string,
-    orderId: number,
-  ): Promise<ShopifyOrder> {
-    const client = await this.createRestClient(shop, accessToken);
-
-    const response = await client.get({
-      path: `orders/${orderId}`,
-    });
-
-    return response.body.order as ShopifyOrder;
-  }
-
+  /* */
   /**
    * Fetch all customers from Shopify store
    */
-  async fetchCustomers(
+  /*   async fetchCustomers(
     shop: string,
     accessToken: string,
     limit: number = 50,
@@ -225,12 +209,12 @@ export class ShopifyServiceAdapter {
     });
 
     return response.body.customers as ShopifyCustomer[];
-  }
+  } */
 
   /**
    * Fetch a single customer by ID
    */
-  async fetchCustomerById(
+  /* async fetchCustomerById(
     shop: string,
     accessToken: string,
     customerId: number,
@@ -242,12 +226,12 @@ export class ShopifyServiceAdapter {
     });
 
     return response.body.customer as ShopifyCustomer;
-  }
+  } */
 
   /**
    * Create a new product
    */
-  async createProduct(
+  /* async createProduct(
     shop: string,
     accessToken: string,
     productData: Partial<ShopifyProduct>,
@@ -260,12 +244,12 @@ export class ShopifyServiceAdapter {
     });
 
     return response.body.product as ShopifyProduct;
-  }
+  } */
 
   /**
    * Update an existing product
    */
-  async updateProduct(
+  /*  async updateProduct(
     shop: string,
     accessToken: string,
     productId: number,
@@ -279,12 +263,12 @@ export class ShopifyServiceAdapter {
     });
 
     return response.body.product as ShopifyProduct;
-  }
+  } */
 
   /**
    * Delete a product
    */
-  async deleteProduct(
+  /*  async deleteProduct(
     shop: string,
     accessToken: string,
     productId: number,
@@ -294,12 +278,12 @@ export class ShopifyServiceAdapter {
     await client.delete({
       path: `products/${productId}`,
     });
-  }
+  } */
 
   /**
    * Fetch shop information
    */
-  async fetchShopInfo(shop: string, accessToken: string): Promise<any> {
+  /* async fetchShopInfo(shop: string, accessToken: string): Promise<any> {
     const client = await this.createRestClient(shop, accessToken);
 
     const response = await client.get({
@@ -307,12 +291,12 @@ export class ShopifyServiceAdapter {
     });
 
     return response.body.shop;
-  }
+  } */
 
   /**
    * Search products by query
    */
-  async searchProducts(
+  /* async searchProducts(
     shop: string,
     accessToken: string,
     query: string,
@@ -329,12 +313,12 @@ export class ShopifyServiceAdapter {
     });
 
     return response.body.products as ShopifyProduct[];
-  }
+  } */
 
   /**
    * Get product count
    */
-  async getProductCount(shop: string, accessToken: string): Promise<number> {
+  /* async getProductCount(shop: string, accessToken: string): Promise<number> {
     const client = await this.createRestClient(shop, accessToken);
 
     const response = await client.get({
@@ -342,12 +326,12 @@ export class ShopifyServiceAdapter {
     });
 
     return response.body.count as number;
-  }
+  } */
 
   /**
    * Get order count
    */
-  async getOrderCount(
+  /*  async getOrderCount(
     shop: string,
     accessToken: string,
     status: 'open' | 'closed' | 'cancelled' | 'any' = 'any',
@@ -360,12 +344,12 @@ export class ShopifyServiceAdapter {
     });
 
     return response.body.count as number;
-  }
+  } */
 
   /**
    * Get customer count
    */
-  async getCustomerCount(shop: string, accessToken: string): Promise<number> {
+  /*  async getCustomerCount(shop: string, accessToken: string): Promise<number> {
     const client = await this.createRestClient(shop, accessToken);
 
     const response = await client.get({
@@ -373,5 +357,5 @@ export class ShopifyServiceAdapter {
     });
 
     return response.body.count as number;
-  }
+  } */
 }

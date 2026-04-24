@@ -1,23 +1,5 @@
-import {
-  Body,
-  Controller,
-  Post,
-  Headers,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
-import { reply } from '../../app/utils/reply';
+import { Controller, HttpException, HttpStatus } from '@nestjs/common';
 import { ShopifyService } from './shopify.service';
-import {
-  FetchShopifyProductsDto,
-  FetchShopifyOrdersDto,
-  FetchShopifyCustomersDto,
-  FetchShopifyProductByIdDto,
-  FetchShopifyOrderByIdDto,
-  FetchShopifyShopInfoDto,
-  SearchShopifyProductsDto,
-  GetShopifyCountDto,
-} from './shopify.dto';
 
 @Controller('shopify')
 export class ShopifyController {
@@ -33,10 +15,7 @@ export class ShopifyController {
     return authHeader.slice(7);
   }
 
-  /**
-   * Fetch all products from Shopify
-   */
-  @Post('/products')
+  /*  @Post('/products')
   async fetchProducts(
     @Body() body: FetchShopifyProductsDto,
     @Headers('authorization') authHeader: string,
@@ -61,9 +40,6 @@ export class ShopifyController {
     }
   }
 
-  /**
-   * Fetch a single product by ID
-   */
   @Post('/products/by-id')
   async fetchProductById(
     @Body() body: FetchShopifyProductByIdDto,
@@ -89,9 +65,6 @@ export class ShopifyController {
     }
   }
 
-  /**
-   * Fetch all orders from Shopify
-   */
   @Post('/orders')
   async fetchOrders(
     @Body() body: FetchShopifyOrdersDto,
@@ -118,9 +91,6 @@ export class ShopifyController {
     }
   }
 
-  /**
-   * Fetch a single order by ID
-   */
   @Post('/orders/by-id')
   async fetchOrderById(
     @Body() body: FetchShopifyOrderByIdDto,
@@ -146,9 +116,6 @@ export class ShopifyController {
     }
   }
 
-  /**
-   * Fetch all customers from Shopify
-   */
   @Post('/customers')
   async fetchCustomers(
     @Body() body: FetchShopifyCustomersDto,
@@ -174,9 +141,6 @@ export class ShopifyController {
     }
   }
 
-  /**
-   * Fetch shop information
-   */
   @Post('/shop-info')
   async fetchShopInfo(
     @Body() body: FetchShopifyShopInfoDto,
@@ -198,9 +162,6 @@ export class ShopifyController {
     }
   }
 
-  /**
-   * Search products by query
-   */
   @Post('/products/search')
   async searchProducts(
     @Body() body: SearchShopifyProductsDto,
@@ -227,9 +188,6 @@ export class ShopifyController {
     }
   }
 
-  /**
-   * Get product count
-   */
   @Post('/products/count')
   async getProductCount(
     @Body() body: FetchShopifyShopInfoDto,
@@ -254,9 +212,6 @@ export class ShopifyController {
     }
   }
 
-  /**
-   * Get order count
-   */
   @Post('/orders/count')
   async getOrderCount(
     @Body() body: GetShopifyCountDto,
@@ -282,9 +237,6 @@ export class ShopifyController {
     }
   }
 
-  /**
-   * Get customer count
-   */
   @Post('/customers/count')
   async getCustomerCount(
     @Body() body: FetchShopifyShopInfoDto,
@@ -307,5 +259,5 @@ export class ShopifyController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-  }
+  } */
 }
