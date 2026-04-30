@@ -11,7 +11,7 @@
   "scripts": {
     "build": "NODE_OPTIONS=--max-old-space-size=3072 nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "NODE_OPTIONS=--max-old-space-size=3072 nest start",
+    "start": "NODE_OPTIONS=--max-old-space-size=3072 nest start && pm2 start dist/main.js --name vedcausa --watch",
     "dev": "NODE_OPTIONS=--max-old-space-size=3072 nest start --watch",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
