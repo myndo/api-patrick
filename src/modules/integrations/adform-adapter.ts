@@ -2,12 +2,12 @@ import axios from 'axios';
 
 const TOKEN_URL = 'https://id.adform.com/sts/connect/token';
 const API_BASE = 'https://api.adform.com/v1';
-const SCOPES =
-  'https://api.adform.com/scope/buyer.stats https://api.adform.com/scope/buyer.campaigns';
 
 export interface AdformConfig {
   clientId: string;
   clientSecret: string;
+  /** Optional OAuth scopes. When omitted, Adform uses the default scopes granted to the client. */
+  scope?: string;
 }
 
 export interface AdformTokenResponse {
@@ -58,18 +58,17 @@ export class AdformServiceAdapter {
     this.config = config;
   }
 
-  private async getAccessToken(): Promise<string> {
-    const now = Date.now();
-    if (this.cachedToken && now < this.tokenExpiresAt) {
-      return this.cachedToken;
-    }
-
+  async requestAccessToken(): Promise<AdformTokenResponse> {
     const params = new URLSearchParams({
       grant_type: 'client_credentials',
       client_id: this.config.clientId,
       client_secret: this.config.clientSecret,
-      scope: SCOPES,
     });
+
+    // Only include scope if explicitly provided; omitting it lets Adform
+    // use the default scopes already granted to this client.
+    const scope = this.config.scope ?? process.env.ADFORM_SCOPES;
+    if (scope) params.set('scope', scope);
 
     const response = await axios.post<AdformTokenResponse>(
       TOKEN_URL,
@@ -79,10 +78,21 @@ export class AdformServiceAdapter {
       },
     );
 
+    const now = Date.now();
     this.cachedToken = response.data.access_token;
-    // Subtract 60 s buffer before expiry
     this.tokenExpiresAt = now + (response.data.expires_in - 60) * 1000;
-    return this.cachedToken;
+
+    return response.data;
+  }
+
+  async getAccessToken(): Promise<string> {
+    const now = Date.now();
+    if (this.cachedToken && now < this.tokenExpiresAt) {
+      return this.cachedToken;
+    }
+
+    const token = await this.requestAccessToken();
+    return token.access_token;
   }
 
   private async authHeaders(): Promise<Record<string, string>> {

@@ -7,6 +7,34 @@ import {
   Matches,
 } from 'class-validator';
 
+export class CreateAdformJobDto {
+  @IsNotEmpty()
+  @IsString()
+  fromDate: string;
+
+  @IsNotEmpty()
+  @IsString()
+  toDate: string;
+
+  @IsNotEmpty()
+  @IsString()
+  profileId: string;
+
+  @IsOptional()
+  @IsString()
+  reportCurrencyCode?: string;
+}
+
+export class LoginAdformDto {
+  @IsOptional()
+  @IsString()
+  clientId: string;
+
+  @IsOptional()
+  @IsString()
+  clientSecret: string;
+}
+
 export class FetchAdformStatsDto {
   @IsNotEmpty()
   @IsString()
