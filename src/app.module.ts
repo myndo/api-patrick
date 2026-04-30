@@ -6,6 +6,7 @@ import { RtbHouseModule } from './modules/rtb_house/rtb_house.module';
 import { ZemantaModule } from './modules/zemanta/zemanta.module';
 import { TradeDoublerModule } from './modules/tradedoubler/tradedoubler.module';
 import { AdformModule } from './modules/adform/adform.module';
+import { HelloModule } from './modules/hello/hello.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AdformModule } from './modules/adform/adform.module';
     ZemantaModule,
     TradeDoublerModule,
     AdformModule,
+    HelloModule,
   ],
 })
 export class AppModule {}
