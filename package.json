@@ -24,7 +24,22 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+	"pm2:start": "pm2 start ecosystem.config.js",
+  "pm2:start:api": "pm2 start ecosystem.config.js --only api",
+  "pm2:start:workers": "pm2 start ecosystem.config.js --only tradedoubler-worker,rtbhouse-worker,zemanta-worker",
+  "pm2:stop": "pm2 stop ecosystem.config.js",
+  "pm2:restart": "pm2 restart ecosystem.config.js",
+  "pm2:reload": "pm2 reload ecosystem.config.js",
+  "pm2:delete": "pm2 delete ecosystem.config.js",
+  "pm2:status": "pm2 status",
+  "pm2:logs": "pm2 logs",
+  "pm2:logs:api": "pm2 logs api",
+  "pm2:monit": "pm2 monit",
+  "pm2:save": "pm2 save",
+
+  "deploy": "git pull && npm install && npm run db:migrate && npm run build && npm run pm2:reload && npm run pm2:save"
+
   },
   "dependencies": {
     "@nestjs/cli": "^11.0.21",
