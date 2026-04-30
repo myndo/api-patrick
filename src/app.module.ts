@@ -3,11 +3,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { DatabaseModule } from './app/database/database.module';
 import { UsersModule } from './modules/users/users.module';
 import { RtbHouseModule } from './modules/rtb_house/rtb_house.module';
-import { GoogleSearchConsoleModule } from './modules/google-search-console/google-search-console.module';
-import { OAuthModule } from './modules/oauth/oauth.module';
 import { ZemantaModule } from './modules/zemanta/zemanta.module';
 import { TradeDoublerModule } from './modules/tradedoubler/tradedoubler.module';
-import { Dv360Module } from './modules/dv360/dv360.module';
 import { AdformModule } from './modules/adform/adform.module';
 
 @Module({
@@ -16,11 +13,8 @@ import { AdformModule } from './modules/adform/adform.module';
     DatabaseModule,
     UsersModule,
     RtbHouseModule,
-    GoogleSearchConsoleModule,
-    OAuthModule,
     ZemantaModule,
     TradeDoublerModule,
-    Dv360Module,
     AdformModule,
   ],
 })
