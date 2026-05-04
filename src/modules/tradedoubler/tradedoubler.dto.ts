@@ -8,14 +8,6 @@ export class LoginTradeDoublerDto {
   @IsNotEmpty()
   @IsString()
   password: string;
-
-  @IsNotEmpty()
-  @IsString()
-  clientId: string;
-
-  @IsNotEmpty()
-  @IsString()
-  secret: string;
 }
 export class CreateTradeDoublerJobDto {
   @IsNotEmpty()

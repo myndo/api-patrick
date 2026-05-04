@@ -25,7 +25,16 @@ export class TradeDoublerController {
   @Post(`/users/register`)
   async login(@Res() res, @Body() body: LoginTradeDoublerDto) {
     try {
-      const { username, password, clientId, secret } = body;
+      const { username, password } = body;
+      const clientId = process.env.TRADEDOUBLER_CLIENT_ID?.trim();
+      const secret = process.env.TRADEDOUBLER_SECRET?.trim();
+
+      if (!clientId || !secret) {
+        throw new HttpException(
+          'Missing TRADEDOUBLER_CLIENT_ID or TRADEDOUBLER_SECRET in environment variables',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
 
       const encoded = Buffer.from(`${clientId}:${secret}`).toString('base64');
       const params = new URLSearchParams();

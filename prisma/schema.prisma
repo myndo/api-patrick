@@ -60,7 +60,7 @@ model IntegrationToken {
   id           String    @id @default(uuid())
   userId       String
   profileId    String?
-  provider     String    // "dv360" | "zemanta" | "rtbhouse" etc.
+  provider     String   
   accessToken  String    @db.Text
   refreshToken String?   @db.Text
   expiresAt    DateTime?
