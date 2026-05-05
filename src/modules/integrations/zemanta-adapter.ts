@@ -43,35 +43,6 @@ export interface ZemantaAccountDetailsResponse {
   data: ZemantaAccount;
 }
 
-export interface ZemantaCreditItem {
-  id: string;
-  startDate: string;
-  endDate: string;
-  createdOn: string;
-  total: string;
-  allocated: string;
-  available: string;
-  currency: string;
-}
-
-export interface ZemantaCreditListResponse {
-  data: ZemantaCreditItem[];
-}
-
-export interface ZemantaCreditDetailsResponse {
-  data: ZemantaCreditItem;
-}
-
-export interface ZemantaSource {
-  slug: string;
-  name: string;
-  auditors: string[];
-}
-
-export interface ZemantaSourcesResponse {
-  data: ZemantaSource[];
-}
-
 export interface ZemantaBudgetItem {
   id: string;
   creditId: string;
@@ -129,10 +100,6 @@ export interface ZemantaCampaignStats {
 
 export interface ZemantaCampaignStatsResponse {
   data: ZemantaCampaignStats;
-}
-
-export interface ZemantaCampaignBudgetsResponse {
-  data: ZemantaBudgetItem[];
 }
 
 export class ZemantaAdapter {
@@ -366,66 +333,5 @@ export class ZemantaAdapter {
     );
 
     return response.data.data;
-  }
-
-  /**
-   * Get campaign budgets
-   */
-  async getCampaignBudgets(
-    campaignId: string,
-    accessToken?: string,
-  ): Promise<ZemantaBudgetItem[]> {
-    await this.setAuthHeader(accessToken);
-
-    const response = await this.client.get<ZemantaCampaignBudgetsResponse>(
-      `/rest/v1/campaigns/${campaignId}/budgets/`,
-    );
-
-    return response.data.data;
-  }
-
-  /**
-   * Get campaign details (budgets and optionally stats)
-   */
-  async getCampaignDetails(
-    campaignId: string,
-    from?: string,
-    to?: string,
-    accessToken?: string,
-  ): Promise<{
-    data: { budgets: ZemantaBudgetItem[]; stats?: ZemantaCampaignStats };
-  }> {
-    await this.setAuthHeader(accessToken);
-
-    const budgetsPromise = this.client.get<ZemantaCampaignBudgetsResponse>(
-      `/rest/v1/campaigns/${campaignId}/budgets/`,
-    );
-
-    // Only fetch stats if date range is provided
-    const statsPromise =
-      from && to
-        ? this.client.get<ZemantaCampaignStatsResponse>(
-            `/rest/v1/campaigns/${campaignId}/stats/`,
-            { params: { from, to } },
-          )
-        : null;
-
-    const [budgetsResponse, statsResponse] = await Promise.all([
-      budgetsPromise,
-      statsPromise,
-    ]);
-
-    const data: {
-      budgets: ZemantaBudgetItem[];
-      stats?: ZemantaCampaignStats;
-    } = {
-      budgets: budgetsResponse.data.data,
-    };
-
-    if (statsResponse) {
-      data.stats = statsResponse.data.data;
-    }
-
-    return { data };
   }
 }

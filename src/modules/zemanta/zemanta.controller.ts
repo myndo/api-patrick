@@ -10,7 +10,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { ZemantaService } from './zemanta.service';
-import { CreateZemantaJobDto, GenerateAccessTokenDto } from './zemanta.dto';
+import { CreateZemantaJobDto } from './zemanta.dto';
 import { reply } from '../../app/utils/reply';
 
 @Controller('zemanta')
@@ -18,11 +18,8 @@ export class ZemantaController {
   constructor(private readonly zemantaService: ZemantaService) {}
 
   @Post(`/users/register`)
-  async generate_AccessToken(
-    @Body(new ValidationPipe({ transform: true })) body: GenerateAccessTokenDto,
-    @Res() res,
-  ) {
-    const data = await this.zemantaService.generateAccessToken(body);
+  async generate_AccessToken(@Res() res) {
+    const data = await this.zemantaService.generateAccessToken();
     return reply({
       res,
       results: {

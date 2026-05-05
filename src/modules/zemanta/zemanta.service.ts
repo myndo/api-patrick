@@ -2,29 +2,14 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { ZemantaAdapter } from '../integrations/zemanta-adapter';
 import { DatabaseService } from '../../app/database/database.service';
 import { IntegrationTokenService } from '../integrations/integration-token.service';
-import { CreateZemantaJobDto, GenerateAccessTokenDto } from './zemanta.dto';
+import { CreateZemantaJobDto } from './zemanta.dto';
 
 @Injectable()
 export class ZemantaService {
-  private zemantaAdapter: ZemantaAdapter;
-
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly integrationTokenService: IntegrationTokenService,
-  ) {
-    this.zemantaAdapter = new ZemantaAdapter({
-      clientId: process.env.ZEMANTA_CLIENT_ID || '',
-      clientSecret: process.env.ZEMANTA_CLIENT_SECRET || '',
-    });
-  }
-
-  private extractAccessToken(authorization?: string): string | undefined {
-    if (!authorization) {
-      return undefined;
-    }
-
-    return authorization.replace(/^Bearer\s+/i, '').trim();
-  }
+  ) {}
 
   private async resolveOrCreateUserFromAccounts(accounts: any[]) {
     const primary = accounts[0] || {};
@@ -117,11 +102,21 @@ export class ZemantaService {
   /**
    * Generate access token from provided credentials
    */
-  async generateAccessToken(body: GenerateAccessTokenDto) {
+  async generateAccessToken() {
     try {
+      const clientId = process.env.ZEMANTA_CLIENT_ID || '';
+      const clientSecret = process.env.ZEMANTA_CLIENT_SECRET || '';
+
+      if (!clientId || !clientSecret) {
+        throw new HttpException(
+          'Missing Zemanta credentials in environment. Please set ZEMANTA_CLIENT_ID and ZEMANTA_CLIENT_SECRET.',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+
       const adapter = new ZemantaAdapter({
-        clientId: body.clientId,
-        clientSecret: body.clientSecret,
+        clientId,
+        clientSecret,
       });
 
       const accessToken = await adapter.getAccessToken();
@@ -156,8 +151,8 @@ export class ZemantaService {
             accessToken,
             expiresAt,
             metadata: {
-              clientId: body.clientId,
-              clientSecret: body.clientSecret,
+              clientId,
+              clientSecret,
               baseUrl:
                 process.env.ZEMANTA_BASE_URL || 'https://oneapi.zemanta.com',
             },
@@ -174,241 +169,6 @@ export class ZemantaService {
       if (error instanceof HttpException) {
         throw error;
       }
-    }
-  }
-
-  private async resolveZemantaToken(
-    authorization?: string,
-    userId?: string,
-    profileId?: string,
-  ): Promise<string | undefined> {
-    const fromHeader = this.extractAccessToken(authorization);
-    if (fromHeader) return fromHeader;
-
-    if (!userId) return undefined;
-
-    const stored = await this.integrationTokenService.getToken(
-      userId,
-      'zemanta',
-      profileId,
-    );
-    if (!stored) return undefined;
-
-    if (!stored.isExpired) return stored.accessToken;
-
-    // Token expired — auto-refresh using stored credentials
-    if (!stored.metadata?.clientId || !stored.metadata?.clientSecret) {
-      return undefined;
-    }
-
-    const adapter = new ZemantaAdapter({
-      clientId: stored.metadata.clientId,
-      clientSecret: stored.metadata.clientSecret,
-      baseUrl: stored.metadata.baseUrl,
-    });
-    const freshToken = await adapter.getAccessToken();
-    const expiresAt = new Date(Date.now() + 55 * 60 * 1000);
-
-    await this.integrationTokenService.saveToken(
-      userId,
-      'zemanta',
-      {
-        accessToken: freshToken,
-        expiresAt,
-        metadata: stored.metadata,
-      },
-      profileId,
-    );
-
-    return freshToken;
-  }
-
-  /**
-   * List all accounts
-   */
-  async listAccounts(
-    includeArchived: boolean = false,
-    includeDeliveryStatus: boolean = false,
-    authorization?: string,
-    userId?: string,
-  ) {
-    try {
-      const accessToken = await this.resolveZemantaToken(authorization, userId);
-      const accounts = await this.zemantaAdapter.listAccounts(
-        {
-          includeArchived,
-          includeDeliveryStatus,
-        },
-        accessToken,
-      );
-      return { accounts };
-    } catch (error) {
-      throw new HttpException(
-        `Failed to list accounts: ${error}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /**
-   * Get account details
-   */
-  async getAccountDetails(
-    accountId: string,
-    includeDeliveryStatus: boolean = false,
-    authorization?: string,
-    userId?: string,
-  ) {
-    try {
-      const accessToken = await this.resolveZemantaToken(authorization, userId);
-      const account = await this.zemantaAdapter.getAccountDetails(
-        accountId,
-        includeDeliveryStatus,
-        accessToken,
-      );
-      return { account };
-    } catch (error) {
-      throw new HttpException(
-        (error instanceof Error ? error.message : String(error)) ||
-          'Failed to fetch Zemanta account details',
-        error instanceof Object && 'status' in error
-          ? (error as any).status
-          : HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /**
-   * List campaigns
-   */
-  async listCampaigns(
-    params: {
-      includeArchived?: boolean;
-      includeGoals?: boolean;
-      includeBudgets?: boolean;
-      includeDeliveryStatus?: boolean;
-      accountId?: string;
-      excludeInactive?: boolean;
-      from?: string;
-      to?: string;
-    },
-    authorization?: string,
-    userId?: string,
-  ) {
-    try {
-      const accessToken = await this.resolveZemantaToken(authorization, userId);
-      // If from and to dates are provided, fetch campaigns with stats
-      if (params.from && params.to) {
-        const { from, to, ...campaignParams } = params;
-        const campaigns = await this.zemantaAdapter.listCampaignsWithStats(
-          campaignParams,
-          from,
-          to,
-          accessToken,
-        );
-        return { campaigns };
-      }
-
-      // Otherwise, fetch campaigns without stats
-      const campaigns = await this.zemantaAdapter.listCampaigns(
-        params,
-        accessToken,
-      );
-      return { campaigns };
-    } catch (error) {
-      throw new HttpException(
-        (error instanceof Error ? error.message : String(error)) ||
-          'Failed to list campaigns',
-        error instanceof Object && 'status' in error
-          ? (error as any).status
-          : HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /**
-   * Get campaign statistics
-   */
-  async getCampaignStats(
-    campaignId: string,
-    from: string,
-    to: string,
-    authorization?: string,
-    userId?: string,
-  ) {
-    try {
-      const accessToken = await this.resolveZemantaToken(authorization, userId);
-      const stats = await this.zemantaAdapter.getCampaignStats(
-        campaignId,
-        from,
-        to,
-        accessToken,
-      );
-      return { stats };
-    } catch (error) {
-      throw new HttpException(
-        (error instanceof Error ? error.message : String(error)) ||
-          'Failed to get campaign stats',
-        error instanceof Object && 'status' in error
-          ? (error as any).status
-          : HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /**
-   * Get campaign budgets
-   */
-  async getCampaignBudgets(
-    campaignId: string,
-    authorization?: string,
-    userId?: string,
-  ) {
-    try {
-      const accessToken = await this.resolveZemantaToken(authorization, userId);
-      const budgets = await this.zemantaAdapter.getCampaignBudgets(
-        campaignId,
-        accessToken,
-      );
-      return { budgets };
-    } catch (error) {
-      throw new HttpException(
-        (error instanceof Error ? error.message : String(error)) ||
-          'Failed to get campaign budgets',
-        error instanceof Object && 'status' in error
-          ? (error as any).status
-          : HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  /**
-   * Get campaign details (budgets and optionally stats)
-   */
-  async getCampaignDetails(
-    campaignId: string,
-    from?: string,
-    to?: string,
-    authorization?: string,
-    userId?: string,
-  ) {
-    try {
-      const accessToken = await this.resolveZemantaToken(authorization, userId);
-      const result = await this.zemantaAdapter.getCampaignDetails(
-        campaignId,
-        from,
-        to,
-        accessToken,
-      );
-      return result;
-    } catch (error) {
-      throw new HttpException(
-        (error instanceof Error ? error.message : String(error)) ||
-          'Failed to get campaign details',
-        error instanceof Object && 'status' in error
-          ? (error as any).status
-          : HttpStatus.INTERNAL_SERVER_ERROR,
-      );
     }
   }
 

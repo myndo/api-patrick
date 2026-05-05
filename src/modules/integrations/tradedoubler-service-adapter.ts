@@ -106,27 +106,6 @@ export class TradeDoublerServiceAdapter {
     };
   }
 
-  async fetchStatisticsReport(dateFrom: string, dateTo: string): Promise<any> {
-    const formattedFromDate = dateFrom.replace(/-/g, '');
-    const formattedToDate = dateTo.replace(/-/g, '');
-
-    const response = await axios.get(
-      `${this.baseUrl}/advertiser/report/statistics`,
-      {
-        headers: await this.getAuthHeader(),
-        params: {
-          fromDate: formattedFromDate,
-          toDate: formattedToDate,
-          reportCurrencyCode: 'EUR',
-          intervalType: 'day',
-          reportType: 'program',
-        },
-      },
-    );
-
-    return response.data;
-  }
-
   async fetchTransactionsReport(
     dateFrom: string,
     dateTo: string,
